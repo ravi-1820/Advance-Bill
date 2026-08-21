@@ -13,9 +13,7 @@
 
 <body class="mode-distributor">
 
-    <!-- ==========================================
-         TOP BRAND HEADER
-    ========================================== -->
+    <!-- TOP BRAND HEADER -->
     <header class="top-header">
         <div class="brand-title">
             <div class="brand-logo">QR</div>
@@ -36,10 +34,7 @@
         </div>
     </header>
 
-
-    <!-- ==========================================
-         MAIN LOGIN CARD PORTAL
-    ========================================== -->
+    <!-- MAIN LOGIN CARD PORTAL -->
     <main class="main-wrapper">
         <div class="auth-card">
             
@@ -98,6 +93,17 @@
                     <p>Sign in to access your billing workspace</p>
                 </div>
 
+                <!-- Django Feedback Messages -->
+                {% if messages %}
+                    <div style="margin-bottom: 1rem;">
+                        {% for message in messages %}
+                            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <!-- ROLE SELECTION SWITCHER -->
                 <div class="role-switch">
                     <button type="button" class="role-btn active" onclick="App.setRole('distributor')">
@@ -109,20 +115,18 @@
                 </div>
 
 
-                <!-- ==================================
-                     1. DISTRIBUTOR FORM
-                ================================== -->
+                <!-- 1. DISTRIBUTOR FORM -->
                 <div id="form-distributor">
                     <!-- Distributor Sub-Tabs -->
                     <div class="sub-nav">
                         <button type="button" class="sub-btn active" onclick="App.setSubTab('password')">🔑 Password</button>
-                        <button type="button" class="sub-btn" onclick="App.setSubTab('qr')">📷 QR Login</button>
-                        <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">📲 Mobile OTP</button>
+                        <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">📲 Mobile Login</button>
                     </div>
 
                     <!-- Password Form -->
                     <div id="sub-password">
-                        <form action="{% url 'distributor_dashboard' %}" method="GET">
+                        <form action="{% url 'distributor_login' %}" method="POST">
+                            {% csrf_token %}
                             <div class="form-group">
                                 <div class="label-row">
                                     <label>Distributor ID or Email</label>
@@ -151,45 +155,25 @@
                         </form>
                     </div>
 
-                    <!-- QR Scanner Form -->
-                    <div id="sub-qr" style="display: none;">
-                        <div class="qr-box">
-                            <div class="qr-frame-inner">
-                                <div class="laser"></div>
-                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.5">
-                                    <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-                                    <rect x="7" y="7" width="3" height="3" fill="#06b6d4"/>
-                                    <rect x="14" y="7" width="3" height="3" fill="#06b6d4"/>
-                                    <rect x="7" y="14" width="3" height="3" fill="#06b6d4"/>
-                                </svg>
-                            </div>
-                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem;">
-                                Scan your physical QR Badge or click simulate below.
-                            </p>
-                            <button type="button" class="btn-primary" style="background: rgba(6,182,212,0.2); color: #06b6d4; border: 1px solid #06b6d4;" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
-                                ⚡ Simulate QR Scan Login
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- OTP Form -->
+                    <!-- Mobile Form -->
                     <div id="sub-otp" style="display: none;">
-                        <form action="{% url 'distributor_dashboard' %}" method="GET">
+                        <form action="{% url 'distributor_login' %}" method="POST">
+                            {% csrf_token %}
                             <div class="form-group">
                                 <div class="label-row"><label>Mobile Number</label></div>
                                 <div class="input-box">
                                     <span class="icon">📞</span>
-                                    <input type="tel" name="mobile" class="input-field" placeholder="+91 98765 43210" required>
+                                    <input type="tel" name="mobile" class="input-field" placeholder="e.g. 94095369850" required>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <div class="label-row"><label>4-Digit Security OTP</label></div>
-                                <div class="otp-inputs">
-                                    <input type="text" maxlength="1" class="input-field" value="7">
-                                    <input type="text" maxlength="1" class="input-field" value="4">
-                                    <input type="text" maxlength="1" class="input-field" value="9">
-                                    <input type="text" maxlength="1" class="input-field" value="2">
+                                <div class="label-row">
+                                    <label>Password</label>
+                                </div>
+                                <div class="input-box">
+                                    <span class="icon">🔒</span>
+                                    <input type="password" id="mobile-pass" name="password" class="input-field" placeholder="Enter password" required>
                                 </div>
                             </div>
 
@@ -201,16 +185,15 @@
                 </div>
 
 
-                <!-- ==================================
-                     2. ADMIN FORM
-                ================================== -->
+                <!-- 2. ADMIN FORM -->
                 <div id="form-admin" style="display: none;">
-                    <form action="{% url 'admin_dashboard' %}" method="GET">
+                    <form action="{% url 'admin_login' %}" method="POST">
+                        {% csrf_token %}
                         <div class="form-group">
-                            <div class="label-row"><label>Admin Email Address</label></div>
+                            <div class="label-row"><label>Admin Email Address or Username</label></div>
                             <div class="input-box">
                                 <span class="icon">✉️</span>
-                                <input type="email" name="admin_email" class="input-field" placeholder="admin@advancebilling.com" required>
+                                <input type="text" name="admin_email" class="input-field" placeholder="admin@advancebilling.com" required>
                             </div>
                         </div>
 
@@ -226,14 +209,6 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <div class="label-row"><label>System Security PIN (4-Digit)</label></div>
-                            <div class="input-box">
-                                <span class="icon">🔢</span>
-                                <input type="password" name="admin_pin" maxlength="4" class="input-field" placeholder="9988" required>
-                            </div>
-                        </div>
-
                         <button type="submit" class="btn-primary" style="background: var(--admin-primary);">
                             🛡️ Authenticate Admin Portal
                         </button>
@@ -245,84 +220,119 @@
     </main>
 
 
-    <!-- ==========================================
-         SINGLE UNIFIED FORGOT PASSWORD MODAL
-    ========================================== -->
+    <!-- SINGLE UNIFIED FORGOT PASSWORD MODAL -->
     <div id="forgot-modal" class="modal-bg">
         <div class="modal-card-inner">
             <button type="button" class="close-x" onclick="App.closeModal()">✕</button>
 
-            <!-- STEP 1: Enter Email -->
+            <!-- STEP 1: Enter Email/Phone -->
             <div id="step-1">
                 <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered email address to receive a security OTP.</p>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered email or mobile to receive a 6-digit OTP.</p>
                 
-                <form onsubmit="App.sendOTP(event)">
+                <form onsubmit="handleSendOTP(event)">
+                    {% csrf_token %}
                     <div class="form-group">
                         <div class="input-box">
                             <span class="icon">✉️</span>
-                            <input type="email" class="input-field" placeholder="user@advancebilling.com" required>
+                            <input type="text" id="forgot-identity" class="input-field" placeholder="email or phone number" required>
                         </div>
                     </div>
                     <button type="submit" class="btn-primary">📩 Send Security OTP</button>
                 </form>
             </div>
 
-            <!-- STEP 2: Verify OTP -->
+            <!-- STEP 2: Verify OTP & Reset Password -->
             <div id="step-2" style="display: none;">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify Security OTP</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter 4-digit code sent to your registered email.</p>
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify OTP & Set New Password</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter the 6-digit OTP and your new password.</p>
                 
-                <form onsubmit="App.verifyOTP(event)">
-                    <div class="otp-inputs">
-                        <input type="text" maxlength="1" class="input-field" value="5">
-                        <input type="text" maxlength="1" class="input-field" value="5">
-                        <input type="text" maxlength="1" class="input-field" value="2">
-                        <input type="text" maxlength="1" class="input-field" value="1">
-                    </div>
-
-                    <div class="resend-row">
-                        <span>Didn't receive code?</span>
-                        <div>
-                            <span id="timer-label" style="color: var(--accent); font-weight: 700; margin-right: 6px;">0:30</span>
-                            <button type="button" id="resend-btn" class="link-btn" onclick="App.resendOTP()" disabled>Resend OTP</button>
+                <form onsubmit="handleVerifyReset(event)">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <div class="input-box">
+                            <span class="icon">🔢</span>
+                            <input type="text" id="otp-code" maxlength="6" class="input-field" placeholder="6-digit OTP" required>
                         </div>
                     </div>
-
-                    <button type="submit" class="btn-primary">⚡ Verify OTP Code</button>
-                </form>
-            </div>
-
-            <!-- STEP 3: Set Password -->
-            <div id="step-3" style="display: none;">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Create New Password</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your new strong password.</p>
-                
-                <form onsubmit="App.savePassword(event)">
                     <div class="form-group">
                         <div class="input-box">
                             <span class="icon">🔐</span>
-                            <input type="password" id="new-p" class="input-field" placeholder="New password" required>
-                            <button type="button" class="eye-btn" onclick="App.togglePassword('new-p', this)">👁️</button>
+                            <input type="password" id="forgot-new-pass" class="input-field" placeholder="New Password" required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <div class="input-box">
-                            <span class="icon">🔒</span>
-                            <input type="password" id="conf-p" class="input-field" placeholder="Confirm password" required>
-                            <button type="button" class="eye-btn" onclick="App.togglePassword('conf-p', this)">👁️</button>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">✅ Save Password & Login</button>
+
+                    <button type="submit" class="btn-primary">⚡ Verify OTP & Reset Password</button>
                 </form>
             </div>
 
         </div>
     </div>
 
-
     <!-- Minimal JS App -->
     <script src="{% static 'assets/js/app.js' %}"></script>
+    <script>
+        function handleSendOTP(e) {
+            e.preventDefault();
+            const identity = document.getElementById('forgot-identity').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'generate_forgot_otp' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({'identity': identity})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    App.toast(data.message);
+                    if (data.demo_otp) {
+                        alert(`Demo OTP Code: ${data.demo_otp}`);
+                    }
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                } else {
+                    App.toast(data.message);
+                }
+            })
+            .catch(err => {
+                App.toast('Error sending OTP.');
+            });
+        }
+
+        function handleVerifyReset(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otp-code').value;
+            const newPassword = document.getElementById('forgot-new-pass').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'verify_reset_password' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({'otp': otp, 'new_password': newPassword})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    App.toast(data.message);
+                    alert(data.message);
+                    App.closeModal();
+                    window.location.reload();
+                } else {
+                    App.toast(data.message);
+                }
+            })
+            .catch(err => {
+                App.toast('Error resetting password.');
+            });
+        }
+    </script>
 </body>
 
 </html>

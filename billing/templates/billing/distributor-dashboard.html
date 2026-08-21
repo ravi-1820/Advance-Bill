@@ -6,117 +6,597 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Distributor POS Dashboard | Advance Billing System with QR</title>
-    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --card-bg: #131b2e;
+            --card-elevated: #1a243d;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --dist-primary: #2563eb;
+            --dist-accent: #06b6d4;
+            --dist-glow: rgba(37, 99, 235, 0.3);
+        }
+
+        body.theme-light {
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --card-elevated: #f1f5f9;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
+        }
+
+        .top-header {
+            width: 100%;
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+        }
+
+        .brand-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .brand-text span {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            color: #06b6d4;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            background: rgba(37, 99, 235, 0.12);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            color: #60a5fa;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #60a5fa;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #60a5fa;
+        }
+
+        .theme-toggle-btn {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .theme-toggle-btn:hover {
+            transform: translateY(-1px);
+            border-color: var(--border-hover);
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0 1.5rem 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .dash-header-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+            flex-wrap: wrap;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .profile-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+        }
+
+        .user-details h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .role-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(6, 182, 212, 0.12);
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            color: #06b6d4;
+            border-radius: 99px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-exit {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 0.65rem 1.4rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-exit:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.4rem 1.6rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--dist-primary);
+            border-radius: 4px 0 0 4px;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-hover);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .metric-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-icon-box {
+            width: 38px;
+            height: 38px;
+            background: var(--card-elevated);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .metric-trend {
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .content-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .content-layout { grid-template-columns: 1fr; }
+        }
+
+        .panel-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .panel-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header-row h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .op-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+
+        .op-card {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            transition: all 0.2s ease;
+        }
+        .op-card:hover {
+            border-color: var(--dist-primary);
+            transform: translateY(-2px);
+        }
+
+        .op-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(37, 99, 235, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            color: #60a5fa;
+        }
+
+        .op-text h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .op-text p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .btn-action-primary {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-action-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-action-secondary {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-action-secondary:hover {
+            background: var(--border-hover);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
 
 <body class="theme-distributor">
 
-    <!-- Top Nav -->
-    <header class="top-nav">
-        <div class="brand-badge" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
-            <div class="brand-icon">
-                QR
-            </div>
+    <!-- Top Brand Header -->
+    <header class="top-header">
+        <div class="brand-title" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
+            <div class="brand-logo">QR</div>
             <div class="brand-text">
-                <h2>Advance Billing System</h2>
+                <h1>Advance Billing System</h1>
                 <span>DISTRIBUTOR POS TERMINAL</span>
             </div>
         </div>
 
-        <nav class="route-nav-pills">
-            <a href="{% url 'distributor_dashboard' %}" class="nav-pill distributor-pill active">
-                <span>🛒</span> Distributor Workspace
-            </a>
-        </nav>
-
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div class="header-actions">
             <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
-                🌙 Dark
+                🌙 Dark Mode
             </button>
-            <div class="system-status-badge">
-                <span class="status-dot"></span>
-                <span>PROTECTED DISTRIBUTOR ROUTE</span>
+            <div class="status-badge">
+                <span class="dot"></span>
+                <span>AUTHENTICATED SESSION</span>
             </div>
         </div>
     </header>
 
+    <!-- Main Dashboard Viewport -->
     <main class="dashboard-container">
-        <!-- Header User Card -->
-        <div class="dash-header">
-            <div class="dash-user-info">
-                <div class="avatar">🛒</div>
-                <div>
-                    <h2 id="distributor-name" style="font-size: 1.4rem;">Apex Distributors</h2>
-                    <span class="system-status-badge">
-                        AUTHENTICATED ROLE: DISTRIBUTOR
+        
+        <!-- Welcome User Card -->
+        <div class="dash-header-card">
+            <div class="user-profile">
+                <div class="profile-avatar">🛒</div>
+                <div class="user-details">
+                    <h2 id="distributor-name">{{ profile.company_name|default:request.user.username }}</h2>
+                    <span class="role-tag">
+                        AUTHENTICATED ROLE: DISTRIBUTOR ({{ profile.distributor_id }})
                     </span>
                 </div>
             </div>
 
-            <button class="btn-scan-sim" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171;" onclick="logoutDistributor()">
-                🚪 Exit POS
-            </button>
+            <a href="{% url 'logout' %}" class="btn-exit">
+                🚪 Exit POS Session
+            </a>
         </div>
 
-        <!-- Metric Cards -->
-        <div class="stat-grid">
-            <div class="stat-card">
-                <h5>Today's Sales Collection</h5>
-                <div class="value" style="color: #60a5fa;">₹ 1,12,850</div>
-            </div>
-            <div class="stat-card">
-                <h5>QR Invoices Printed</h5>
-                <div class="value">64 Invoices</div>
-            </div>
-            <div class="stat-card">
-                <h5>Available Inventory</h5>
-                <div class="value" style="color: #34d399;">2,840 Items</div>
-            </div>
-            <div class="stat-card">
-                <h5>Payment Gateway</h5>
-                <div class="value" style="color: #06b6d4;">UPI QR Ready</div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="dash-content-grid">
-            <div class="panel-card">
-                <div class="panel-title">
-                    <span>🧾 Distributor Billing & POS Terminal</span>
+        <!-- 4 Core Metric Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Today's Sales</span>
+                    <div class="metric-icon-box">💰</div>
                 </div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
-                    Welcome to the Distributor POS portal.
+                <div class="metric-value" style="color: #60a5fa;">₹ {{ profile.today_sales|default:"1,12,850" }}</div>
+                <div class="metric-trend" style="color: #34d399;">
+                    <span>↑ Live Ledger</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">QR Invoices Printed</span>
+                    <div class="metric-icon-box">🧾</div>
+                </div>
+                <div class="metric-value">64 Invoices</div>
+                <div class="metric-trend" style="color: #60a5fa;">
+                    <span>⚡ 100% Dynamic QR</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Available Inventory</span>
+                    <div class="metric-icon-box">📦</div>
+                </div>
+                <div class="metric-value" style="color: #34d399;">{{ profile.available_inventory|default:"2,840" }} Items</div>
+                <div class="metric-trend" style="color: #34d399;">
+                    <span>✓ Warehouse Synced</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span class="metric-title">Payment Gateway</span>
+                    <div class="metric-icon-box">📲</div>
+                </div>
+                <div class="metric-value" style="color: #06b6d4;">UPI QR Ready</div>
+                <div class="metric-trend" style="color: #06b6d4;">
+                    <span>● Active & Operational</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Grid Layout -->
+        <div class="content-layout">
+            <!-- Left Main Operations Panel -->
+            <div class="panel-box">
+                <div class="panel-header-row">
+                    <h3>🧾 Distributor Billing & POS Terminal</h3>
+                    <span style="font-size: 0.8rem; color: var(--dist-accent); font-weight: 600;">System v4.2</span>
+                </div>
+                
+                <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6;">
+                    Welcome to your authenticated Distributor POS workspace. Manage instant QR invoices, track stock ledgers, and view settlement reports seamlessly.
                 </p>
-                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1rem; border-radius: 10px;">
-                    <h4 style="color: #60a5fa; margin-bottom: 0.5rem;">Distributor Operations:</h4>
-                    <ul style="color: var(--text-muted); font-size: 0.85rem; padding-left: 1.2rem; line-height: 1.8;">
-                        <li>Instant QR Billing: Generate customer dynamic payment QR codes</li>
-                        <li>Stock Ledger: Real-time inventory sync with main warehouse</li>
-                        <li>Daily settlement reports and store performance metrics</li>
-                    </ul>
+
+                <div class="op-list">
+                    <div class="op-card">
+                        <div class="op-icon">⚡</div>
+                        <div class="op-text">
+                            <h4>Instant Dynamic QR Billing</h4>
+                            <p>Generate customer payment QR codes with automatic amount and signature encoding.</p>
+                        </div>
+                    </div>
+
+                    <div class="op-card">
+                        <div class="op-icon">📦</div>
+                        <div class="op-text">
+                            <h4>Stock Ledger & Sync</h4>
+                            <p>Real-time automated inventory tracking synchronized with the central warehouse.</p>
+                        </div>
+                    </div>
+
+                    <div class="op-card">
+                        <div class="op-icon">📊</div>
+                        <div class="op-text">
+                            <h4>Daily Settlement Reports</h4>
+                            <p>Export daily sales summaries, credit limits, and store performance metrics.</p>
+                        </div>
+                    </div>
+
+                    <div class="op-card">
+                        <div class="op-icon">🛡️</div>
+                        <div class="op-text">
+                            <h4>Encrypted Verification</h4>
+                            <p>256-bit SSL transaction log protection for audit security compliance.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="panel-card">
-                <div class="panel-title">
-                    <span>⚡ Quick Navigation</span>
+            <!-- Right Quick Navigation Panel -->
+            <div class="panel-box">
+                <div class="panel-header-row">
+                    <h3>⚡ Quick Navigation</h3>
                 </div>
-                <button class="btn-primary" style="margin-bottom: 10px;" onclick="App.toast('Generating Dynamic Invoice QR...')">
-                    📱 Generate QR Bill
+
+                <button class="btn-action-primary" onclick="App.toast('Generating Dynamic Invoice QR...')">
+                    📱 Generate Dynamic QR Bill
                 </button>
-                <button class="btn-primary" style="background: var(--card-elevated); color: var(--text-primary); border: 1px solid var(--border);" onclick="window.location.href='{% url 'index' %}'">
-                    🏠 Return to Home
-                </button>
+
+                <a href="{% url 'logout' %}" class="btn-action-secondary">
+                    🏠 Logout & Return to Portal
+                </a>
+
+                <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); padding: 1rem; border-radius: 12px; margin-top: 0.5rem;">
+                    <h5 style="color: #60a5fa; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 700;">Terminal Status</h5>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                        Distributor ID: <strong style="color: var(--text-primary);">{{ profile.distributor_id }}</strong><br>
+                        Mobile: <strong style="color: var(--text-primary);">{{ profile.mobile_number }}</strong><br>
+                        Status: <strong style="color: #34d399;">Online & Authenticated</strong>
+                    </p>
+                </div>
             </div>
         </div>
+
     </main>
 
+    <!-- App JS Script -->
     <script src="{% static 'assets/js/app.js' %}"></script>
-    <script>
-        function logoutDistributor() {
-            window.location.href = "{% url 'index' %}";
-        }
-    </script>
 </body>
 
 </html>
