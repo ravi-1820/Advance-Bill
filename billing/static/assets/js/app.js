@@ -77,23 +77,23 @@ const App = (function () {
     }
 
     /**
-     * Distributor Auth Sub-Tabs (Password vs QR vs OTP)
+     * Distributor Auth Sub-Tabs (Password vs OTP vs Register)
      */
     function setSubTab(tabName) {
         const passBox = document.getElementById('sub-password');
-        const qrBox = document.getElementById('sub-qr');
         const otpBox = document.getElementById('sub-otp');
+        const regBox = document.getElementById('sub-register');
 
         const btns = document.querySelectorAll('.sub-btn');
         btns.forEach(b => b.classList.remove('active'));
 
         if (passBox) passBox.style.display = tabName === 'password' ? 'block' : 'none';
-        if (qrBox) qrBox.style.display = tabName === 'qr' ? 'block' : 'none';
         if (otpBox) otpBox.style.display = tabName === 'otp' ? 'block' : 'none';
+        if (regBox) regBox.style.display = tabName === 'register' ? 'block' : 'none';
 
         if (tabName === 'password' && btns[0]) btns[0].classList.add('active');
-        if (tabName === 'qr' && btns[1]) btns[1].classList.add('active');
-        if (tabName === 'otp' && btns[2]) btns[2].classList.add('active');
+        if (tabName === 'otp' && btns[1]) btns[1].classList.add('active');
+        if (tabName === 'register' && btns[2]) btns[2].classList.add('active');
     }
 
     /**
@@ -114,13 +114,6 @@ const App = (function () {
     function setStep(step) {
         document.getElementById('step-1').style.display = step === 1 ? 'block' : 'none';
         document.getElementById('step-2').style.display = step === 2 ? 'block' : 'none';
-        document.getElementById('step-3').style.display = step === 3 ? 'block' : 'none';
-    }
-
-    function sendOTP(e) {
-        if (e) e.preventDefault();
-        setStep(2);
-        startTimer();
     }
 
     function startTimer() {
@@ -145,17 +138,6 @@ const App = (function () {
     function resendOTP() {
         startTimer();
         toast('OTP Code Resent!');
-    }
-
-    function verifyOTP(e) {
-        if (e) e.preventDefault();
-        setStep(3);
-    }
-
-    function savePassword(e) {
-        if (e) e.preventDefault();
-        toast('Password Updated Successfully!');
-        closeModal();
     }
 
     /**
@@ -187,11 +169,7 @@ const App = (function () {
         setSubTab: setSubTab,
         openModal: openModal,
         closeModal: closeModal,
-        sendOTP: sendOTP,
-        startTimer: startTimer,
         resendOTP: resendOTP,
-        verifyOTP: verifyOTP,
-        savePassword: savePassword,
         toast: toast
     };
 })();

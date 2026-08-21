@@ -13,3 +13,13 @@ class User(models.Model):
 
     def __str__(self):
         return f"{self.company_name or self.name or self.email} ({self.usertype})"
+
+
+class OTP(models.Model):
+    identity = models.CharField(max_length=150)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.identity} - {self.otp}"

@@ -1,17 +1,17 @@
 import random
 import time
+from datetime import timedelta
+from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from billing.models import User
+from billing.models import User, OTP
 
 
 def index(request):
     return render(request, 'billing/index.html')
 
 
-@csrf_exempt
 def distributor_login(request):
     if request.method == 'POST':
         identity = request.POST.get('identity', '').strip()
@@ -64,7 +64,6 @@ def distributor_login(request):
     return redirect('index')
 
 
-@csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         admin_identity = request.POST.get('admin_email', '').strip()
@@ -137,7 +136,6 @@ def admin_dashboard(request):
         return redirect('index')
 
 
-@csrf_exempt
 def distributor_register(request):
     if request.method == 'POST':
         try:
@@ -171,7 +169,6 @@ def distributor_register(request):
     return redirect('index')
 
 
-@csrf_exempt
 def generate_forgot_otp(request):
     if request.method == 'POST':
         try:
@@ -187,11 +184,17 @@ def generate_forgot_otp(request):
                     pass
 
             if user:
-                otp = str(random.randint(100000, 999999))
-                request.session['forgot_otp'] = otp
-                request.session['forgot_user_id'] = user.id
-                request.session['forgot_otp_time'] = time.time()
-                return JsonResponse({'status': 'success', 'message': f'OTP sent: {otp}', 'demo_otp': otp})
+                # Generate random 6-digit OTP
+                otp_code = str(random.randint(100000, 999999))
+
+                # Delete/invalidate old unverified OTPs for this identity
+                OTP.objects.filter(identity=identity, is_verified=False).delete()
+
+                # Store new OTP temporarily in database
+                OTP.objects.create(identity=identity, otp=otp_code)
+                request.session['reset_identity'] = identity
+
+                return JsonResponse({'status': 'success', 'message': f'OTP generated and stored: {otp_code}', 'demo_otp': otp_code})
             else:
                 return JsonResponse({'status': 'error', 'message': "Account doesn't exist..!"}, status=400)
 
@@ -201,36 +204,47 @@ def generate_forgot_otp(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid method.'}, status=405)
 
 
-@csrf_exempt
 def verify_reset_password(request):
     if request.method == 'POST':
         try:
-            otp = request.POST.get('otp', '').strip()
+            entered_otp = request.POST.get('otp', '').strip()
+            identity = request.session.get('reset_identity', '').strip()
             new_password = request.POST.get('new_password', '').strip()
 
-            session_otp = request.session.get('forgot_otp')
-            user_id = request.session.get('forgot_user_id')
+            if not identity:
+                identity = request.POST.get('identity', '').strip()
 
-            if not session_otp or not user_id:
-                return JsonResponse({'status': 'error', 'message': 'OTP session expired.'}, status=400)
+            if not identity:
+                return JsonResponse({'status': 'error', 'message': 'Session expired. Please generate OTP again.'}, status=400)
 
-            if otp == session_otp:
-                try:
-                    user = User.objects.get(id=user_id)
+            # Retrieve latest unverified OTP record from database
+            otp_record = OTP.objects.filter(identity=identity, is_verified=False).order_by('-created_at').first()
+
+            if not otp_record:
+                return JsonResponse({'status': 'error', 'message': 'Invalid OTP!'}, status=400)
+
+            # Check 5-minute expiry (300 seconds)
+            if timezone.now() - otp_record.created_at > timedelta(minutes=5):
+                otp_record.delete()
+                return JsonResponse({'status': 'error', 'message': 'OTP has expired!'}, status=400)
+
+            # Validate OTP code
+            if entered_otp == otp_record.otp:
+                otp_record.is_verified = True
+                otp_record.save()
+
+                # Reset password if new password provided
+                if new_password:
+                    try:
+                        user = User.objects.get(email=identity)
+                    except User.DoesNotExist:
+                        user = User.objects.get(phone=identity)
                     user.password = new_password
                     user.save()
 
-                    try:
-                        del request.session['forgot_otp']
-                        del request.session['forgot_user_id']
-                    except KeyError:
-                        pass
-
-                    return JsonResponse({'status': 'success', 'message': 'Password reset successful!'})
-                except User.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': "User doesn't exist..!"}, status=400)
+                return JsonResponse({'status': 'success', 'message': 'OTP verified successfully!'})
             else:
-                return JsonResponse({'status': 'error', 'message': "OTP code doesn't match..!"}, status=400)
+                return JsonResponse({'status': 'error', 'message': 'Invalid OTP!'}, status=400)
 
         except Exception:
             return JsonResponse({'status': 'error', 'message': 'Something went wrong.'}, status=400)
