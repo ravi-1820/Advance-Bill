@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Workspace Dashboard | Advance Billing System with QR</title>
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+</head>
+
+<body class="theme-admin">
+
+    <!-- Top Nav -->
+    <header class="top-nav">
+        <div class="brand-badge" onclick="window.location.href='{% url 'admin_dashboard' %}'">
+            <div class="brand-icon" style="background: linear-gradient(135deg, #10b981, #047857);">
+                QR
+            </div>
+            <div class="brand-text">
+                <h2>Advance Billing System</h2>
+                <span style="color: #34d399;">ADMIN CONTROL CENTER</span>
+            </div>
+        </div>
+
+        <nav class="route-nav-pills">
+            <a href="{% url 'admin_dashboard' %}" class="nav-pill admin-pill active">
+                <span>⚙️</span> Admin Workspace
+            </a>
+        </nav>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
+                🌙 Dark
+            </button>
+            <div class="system-status-badge">
+                <span class="status-dot"></span>
+                <span>PROTECTED ADMIN ROUTE</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Header User Card -->
+        <div class="dash-header">
+            <div class="dash-user-info">
+                <div class="avatar" style="background: linear-gradient(135deg, #10b981, #047857);">⚙️</div>
+                <div>
+                    <h2 id="admin-name" style="font-size: 1.4rem;">Master Administrator</h2>
+                    <span class="system-status-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+                        AUTHENTICATED ROLE: ADMIN
+                    </span>
+                </div>
+            </div>
+
+            <button class="btn-scan-sim" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171;" onclick="logoutAdmin()">
+                🚪 Sign Out
+            </button>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <h5>Total System Revenue</h5>
+                <div class="value" style="color: #34d399;">₹ 48,92,400</div>
+            </div>
+            <div class="stat-card">
+                <h5>Active Distributors</h5>
+                <div class="value">210 Outlets</div>
+            </div>
+            <div class="stat-card">
+                <h5>QR Billing Gateway</h5>
+                <div class="value" style="color: #60a5fa;">Active (v4.2)</div>
+            </div>
+            <div class="stat-card">
+                <h5>Pending Verification</h5>
+                <div class="value" style="color: #f59e0b;">3 Applications</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="dash-content-grid">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <span>👑 Admin Control Dashboard</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1rem;">
+                    Welcome to the Admin workspace portal.
+                </p>
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 10px;">
+                    <h4 style="color: #34d399; margin-bottom: 0.5rem;">System Capabilities Enabled:</h4>
+                    <ul style="color: var(--text-muted); font-size: 0.85rem; padding-left: 1.2rem; line-height: 1.8;">
+                        <li>Master rate card creation & QR payload signature key updates</li>
+                        <li>Distributor onboarding approval and credit limit control</li>
+                        <li>Real-time invoice audit trail and tax compliance export</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <span>⚡ Quick Navigation</span>
+                </div>
+                <button class="btn-primary" style="background: var(--admin-primary);" onclick="window.location.href='{% url 'index' %}'">
+                    🏠 Return to Portal Home
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="{% static 'assets/js/app.js' %}"></script>
+    <script>
+        function logoutAdmin() {
+            window.location.href = "{% url 'index' %}";
+        }
+    </script>
+</body>
+
+</html>

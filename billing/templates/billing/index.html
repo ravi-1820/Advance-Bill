@@ -1,0 +1,328 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advance Billing System with QR | Login Portal</title>
+    
+    <!-- Unified Clean Stylesheet -->
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+</head>
+
+<body class="mode-distributor">
+
+    <!-- ==========================================
+         TOP BRAND HEADER
+    ========================================== -->
+    <header class="top-header">
+        <div class="brand-title">
+            <div class="brand-logo">QR</div>
+            <div class="brand-text">
+                <h1>Advance Billing System</h1>
+                <span>ENTERPRISE QR SUITE</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
+                🌙 Dark
+            </button>
+            <div class="status-badge">
+                <span class="dot"></span>
+                <span>SYSTEM ONLINE v4.2</span>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- ==========================================
+         MAIN LOGIN CARD PORTAL
+    ========================================== -->
+    <main class="main-wrapper">
+        <div class="auth-card">
+            
+            <!-- LEFT HERO BRANDING SECTION -->
+            <section class="hero-section">
+                <div>
+                    <span class="hero-tag">SMART BILLING PLATFORM</span>
+                    <h2>Smarter Invoices.<br>Instant QR Billing.</h2>
+                    <p>Manage invoices, QR transactions, stock inventory, and distributor settlements from one secure portal.</p>
+
+                    <div class="hero-features">
+                        <div class="feature-box">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-text">
+                                <h4>Instant QR Billing</h4>
+                                <span>Fast payments</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">📦</div>
+                            <div class="feature-text">
+                                <h4>Inventory Ledger</h4>
+                                <span>Stock tracking</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">📊</div>
+                            <div class="feature-text">
+                                <h4>Reports & Insights</h4>
+                                <span>Real-time data</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">🛡️</div>
+                            <div class="feature-text">
+                                <h4>Secure Gateway</h4>
+                                <span>256-Bit SSL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-footer">
+                    © 2026 Advance Billing System with QR
+                </div>
+            </section>
+
+
+            <!-- RIGHT FORM SECTION -->
+            <section class="form-section">
+                <div class="form-header">
+                    <h3>Welcome Back</h3>
+                    <p>Sign in to access your billing workspace</p>
+                </div>
+
+                <!-- ROLE SELECTION SWITCHER -->
+                <div class="role-switch">
+                    <button type="button" class="role-btn active" onclick="App.setRole('distributor')">
+                        🛒 Distributor
+                    </button>
+                    <button type="button" class="role-btn" onclick="App.setRole('admin')">
+                        ⚙️ Admin Access
+                    </button>
+                </div>
+
+
+                <!-- ==================================
+                     1. DISTRIBUTOR FORM
+                ================================== -->
+                <div id="form-distributor">
+                    <!-- Distributor Sub-Tabs -->
+                    <div class="sub-nav">
+                        <button type="button" class="sub-btn active" onclick="App.setSubTab('password')">🔑 Password</button>
+                        <button type="button" class="sub-btn" onclick="App.setSubTab('qr')">📷 QR Login</button>
+                        <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">📲 Mobile OTP</button>
+                    </div>
+
+                    <!-- Password Form -->
+                    <div id="sub-password">
+                        <form action="{% url 'distributor_dashboard' %}" method="GET">
+                            <div class="form-group">
+                                <div class="label-row">
+                                    <label>Distributor ID or Email</label>
+                                </div>
+                                <div class="input-box">
+                                    <span class="icon">👤</span>
+                                    <input type="text" name="identity" class="input-field" placeholder="e.g. DIST-77492 or email" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="label-row">
+                                    <label>Password</label>
+                                    <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
+                                </div>
+                                <div class="input-box">
+                                    <span class="icon">🔒</span>
+                                    <input type="password" id="dist-pass" name="password" class="input-field" placeholder="Enter password" required>
+                                    <button type="button" class="eye-btn" onclick="App.togglePassword('dist-pass', this)">👁️</button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary">
+                                🚀 Sign In to Distributor POS
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- QR Scanner Form -->
+                    <div id="sub-qr" style="display: none;">
+                        <div class="qr-box">
+                            <div class="qr-frame-inner">
+                                <div class="laser"></div>
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.5">
+                                    <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+                                    <rect x="7" y="7" width="3" height="3" fill="#06b6d4"/>
+                                    <rect x="14" y="7" width="3" height="3" fill="#06b6d4"/>
+                                    <rect x="7" y="14" width="3" height="3" fill="#06b6d4"/>
+                                </svg>
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+                                Scan your physical QR Badge or click simulate below.
+                            </p>
+                            <button type="button" class="btn-primary" style="background: rgba(6,182,212,0.2); color: #06b6d4; border: 1px solid #06b6d4;" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
+                                ⚡ Simulate QR Scan Login
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- OTP Form -->
+                    <div id="sub-otp" style="display: none;">
+                        <form action="{% url 'distributor_dashboard' %}" method="GET">
+                            <div class="form-group">
+                                <div class="label-row"><label>Mobile Number</label></div>
+                                <div class="input-box">
+                                    <span class="icon">📞</span>
+                                    <input type="tel" name="mobile" class="input-field" placeholder="+91 98765 43210" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="label-row"><label>4-Digit Security OTP</label></div>
+                                <div class="otp-inputs">
+                                    <input type="text" maxlength="1" class="input-field" value="7">
+                                    <input type="text" maxlength="1" class="input-field" value="4">
+                                    <input type="text" maxlength="1" class="input-field" value="9">
+                                    <input type="text" maxlength="1" class="input-field" value="2">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary">
+                                📲 Verify & Enter POS
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+
+                <!-- ==================================
+                     2. ADMIN FORM
+                ================================== -->
+                <div id="form-admin" style="display: none;">
+                    <form action="{% url 'admin_dashboard' %}" method="GET">
+                        <div class="form-group">
+                            <div class="label-row"><label>Admin Email Address</label></div>
+                            <div class="input-box">
+                                <span class="icon">✉️</span>
+                                <input type="email" name="admin_email" class="input-field" placeholder="admin@advancebilling.com" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-row">
+                                <label>Master Password</label>
+                                <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
+                            </div>
+                            <div class="input-box">
+                                <span class="icon">🔐</span>
+                                <input type="password" id="admin-pass" name="admin_password" class="input-field" placeholder="Enter master password" required>
+                                <button type="button" class="eye-btn" onclick="App.togglePassword('admin-pass', this)">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-row"><label>System Security PIN (4-Digit)</label></div>
+                            <div class="input-box">
+                                <span class="icon">🔢</span>
+                                <input type="password" name="admin_pin" maxlength="4" class="input-field" placeholder="9988" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="background: var(--admin-primary);">
+                            🛡️ Authenticate Admin Portal
+                        </button>
+                    </form>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+
+    <!-- ==========================================
+         SINGLE UNIFIED FORGOT PASSWORD MODAL
+    ========================================== -->
+    <div id="forgot-modal" class="modal-bg">
+        <div class="modal-card-inner">
+            <button type="button" class="close-x" onclick="App.closeModal()">✕</button>
+
+            <!-- STEP 1: Enter Email -->
+            <div id="step-1">
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered email address to receive a security OTP.</p>
+                
+                <form onsubmit="App.sendOTP(event)">
+                    <div class="form-group">
+                        <div class="input-box">
+                            <span class="icon">✉️</span>
+                            <input type="email" class="input-field" placeholder="user@advancebilling.com" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">📩 Send Security OTP</button>
+                </form>
+            </div>
+
+            <!-- STEP 2: Verify OTP -->
+            <div id="step-2" style="display: none;">
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify Security OTP</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter 4-digit code sent to your registered email.</p>
+                
+                <form onsubmit="App.verifyOTP(event)">
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" class="input-field" value="5">
+                        <input type="text" maxlength="1" class="input-field" value="5">
+                        <input type="text" maxlength="1" class="input-field" value="2">
+                        <input type="text" maxlength="1" class="input-field" value="1">
+                    </div>
+
+                    <div class="resend-row">
+                        <span>Didn't receive code?</span>
+                        <div>
+                            <span id="timer-label" style="color: var(--accent); font-weight: 700; margin-right: 6px;">0:30</span>
+                            <button type="button" id="resend-btn" class="link-btn" onclick="App.resendOTP()" disabled>Resend OTP</button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">⚡ Verify OTP Code</button>
+                </form>
+            </div>
+
+            <!-- STEP 3: Set Password -->
+            <div id="step-3" style="display: none;">
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Create New Password</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your new strong password.</p>
+                
+                <form onsubmit="App.savePassword(event)">
+                    <div class="form-group">
+                        <div class="input-box">
+                            <span class="icon">🔐</span>
+                            <input type="password" id="new-p" class="input-field" placeholder="New password" required>
+                            <button type="button" class="eye-btn" onclick="App.togglePassword('new-p', this)">👁️</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-box">
+                            <span class="icon">🔒</span>
+                            <input type="password" id="conf-p" class="input-field" placeholder="Confirm password" required>
+                            <button type="button" class="eye-btn" onclick="App.togglePassword('conf-p', this)">👁️</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">✅ Save Password & Login</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- Minimal JS App -->
+    <script src="{% static 'assets/js/app.js' %}"></script>
+</body>
+
+</html>
