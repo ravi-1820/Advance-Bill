@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from billing.models import User, OTP
 
 
@@ -12,6 +13,7 @@ def index(request):
     return render(request, 'billing/distributor-login.html')
 
 
+@csrf_exempt
 def distributor_login(request):
     if request.method == 'POST':
         identity = request.POST.get('identity', '').strip()
@@ -64,6 +66,7 @@ def distributor_login(request):
     return render(request, 'billing/distributor-login.html')
 
 
+@csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         admin_identity = request.POST.get('admin_email', '').strip()
@@ -136,6 +139,7 @@ def admin_dashboard(request):
         return redirect('index')
 
 
+@csrf_exempt
 def distributor_register(request):
     if request.method == 'POST':
         try:
@@ -216,6 +220,7 @@ def distributor_register(request):
     return render(request, 'billing/register.html')
 
 
+@csrf_exempt
 def generate_forgot_otp(request):
     if request.method == 'POST':
         try:
@@ -251,6 +256,7 @@ def generate_forgot_otp(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid method.'}, status=405)
 
 
+@csrf_exempt
 def verify_reset_password(request):
     if request.method == 'POST':
         try:
