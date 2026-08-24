@@ -195,7 +195,7 @@ def distributor_register(request):
                 messages.error(request, "Password must be at least 6 characters long.")
                 return render(request, 'billing/register.html')
 
-            # Complete registration after validation passes
+            # Complete registration after validation passes: Save to database
             dist_id = f"DIST-{random.randint(10000, 99999)}"
 
             User.objects.create(
@@ -210,8 +210,8 @@ def distributor_register(request):
                 available_inventory=1000
             )
 
-            messages.success(request, f"Registration successful! Your ID is {dist_id}")
-            return redirect('index')
+            messages.success(request, f"Registration successful! Your ID is {dist_id}. Please login.")
+            return redirect('distributor_login')
 
         except Exception:
             messages.error(request, "Something went wrong. Please try again.")
