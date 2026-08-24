@@ -1,0 +1,208 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributor Registration | Advance Billing System</title>
+
+    <!-- Unified Clean Stylesheet -->
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+</head>
+
+<body class="mode-distributor">
+
+    <!-- TOP BRAND HEADER -->
+    <header class="top-header">
+        <div class="brand-title" onclick="window.location.href='{% url 'index' %}'">
+            <div class="brand-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
+                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>Advance Billing System</h1>
+                <span>ENTERPRISE QR SUITE</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <span>Dark Mode</span>
+            </button>
+            <div class="status-badge">
+                <span class="dot"></span>
+                <span>SYSTEM ONLINE v4.2</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN REGISTRATION PORTAL CARD -->
+    <main class="main-wrapper">
+        <div class="auth-card">
+
+            <!-- LEFT HERO BRANDING SECTION -->
+            <section class="hero-section">
+                <div>
+                    <span class="hero-tag">DISTRIBUTOR ONBOARDING</span>
+                    <h2>Join our Enterprise<br>Billing Network.</h2>
+                    <p>Create your distributor workspace today to gain instant access to dynamic QR invoicing, real-time
+                        inventory ledgers, and settlement tracking.</p>
+
+                    <div class="hero-features">
+                        <div class="feature-box">
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Instant ID Allocation</h4>
+                                <span>Unique DIST-XXXXX ID</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Instant QR Billing</h4>
+                                <span>Fast customer checkout</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Default Stock Allocation</h4>
+                                <span>Ready inventory balance</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-box">
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Encrypted Portal</h4>
+                                <span>256-Bit SSL Protection</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-footer">
+                    © 2026 Advance Billing System with QR
+                </div>
+            </section>
+
+
+            <!-- RIGHT FORM SECTION -->
+            <section class="form-section">
+                <div class="form-header">
+                    <h3>Register Distributor</h3>
+                    <p>Fill out the details below to create your account</p>
+                </div>
+
+                <!-- Django Feedback Messages -->
+                {% if messages %}
+                <div style="margin-bottom: 1rem;">
+                    {% for message in messages %}
+                    <div
+                        style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Distributor Registration Form -->
+                <form action="{% url 'distributor_register' %}" method="POST">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <div class="label-row"><label>Full Name</label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            </span>
+                            <input type="text" name="name" class="input-field" placeholder="Enter Your Name" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row"><label>Email Address</label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            </span>
+                            <input type="email" name="email" class="input-field" placeholder="Enter Your Email"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row"><label>Phone / Mobile Number</label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            </span>
+                            <input type="tel" name="phone" class="input-field" placeholder="Enter Your Phone Number"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row"><label>Company / Outlet Name</label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"></path></svg>
+                            </span>
+                            <input type="text" name="company_name" class="input-field" placeholder="Enter Company Name"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row"><label>Password</label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </span>
+                            <input type="password" id="reg-pass" name="password" class="input-field"
+                                placeholder="Enter Your Password" required>
+                            <button type="button" class="eye-btn"
+                                onclick="App.togglePassword('reg-pass', this)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary"
+                        style="background: linear-gradient(135deg, #06b6d4, #2563eb); margin-top: 0.5rem;">
+                        Register Account
+                    </button>
+                </form>
+
+                <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                    Already have an account?
+                    <a href="{% url 'index' %}"
+                        style="color: var(--color-primary); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">Sign In</a>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- Minimal JS App -->
+    <script src="{% static 'assets/js/app.js' %}"></script>
+</body>
+
+</html>

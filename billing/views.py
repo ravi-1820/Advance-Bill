@@ -9,7 +9,7 @@ from billing.models import User, OTP
 
 
 def index(request):
-    return render(request, 'billing/index.html')
+    return render(request, 'billing/distributor-login.html')
 
 
 def distributor_login(request):
@@ -52,16 +52,16 @@ def distributor_login(request):
                     return redirect('distributor_dashboard')
                 else:
                     messages.error(request, "Password doesn't match..!")
-                    return redirect('index')
+                    return render(request, 'billing/distributor-login.html')
             else:
                 messages.error(request, "Distributor account doesn't exist..!")
-                return redirect('index')
+                return render(request, 'billing/distributor-login.html')
 
         except Exception:
             messages.error(request, "Something went wrong. Please try again.")
-            return redirect('index')
+            return render(request, 'billing/distributor-login.html')
 
-    return redirect('index')
+    return render(request, 'billing/distributor-login.html')
 
 
 def admin_login(request):
@@ -85,16 +85,16 @@ def admin_login(request):
                     return redirect('admin_dashboard')
                 else:
                     messages.error(request, "Password doesn't match..!")
-                    return redirect('index')
+                    return render(request, 'billing/admin-login.html')
             else:
                 messages.error(request, "Admin account doesn't exist..!")
-                return redirect('index')
+                return render(request, 'billing/admin-login.html')
 
         except Exception:
             messages.error(request, "Something went wrong. Please try again.")
-            return redirect('index')
+            return render(request, 'billing/admin-login.html')
 
-    return redirect('index')
+    return render(request, 'billing/admin-login.html')
 
 
 def logout_view(request):
@@ -142,9 +142,56 @@ def distributor_register(request):
             name = request.POST.get('name', '').strip()
             email = request.POST.get('email', '').strip()
             phone = request.POST.get('phone', '').strip()
+            company_name = request.POST.get('company_name', '').strip()
             password = request.POST.get('password', '').strip()
-            company_name = request.POST.get('company_name', '').strip() or name
 
+            # 1. Validate Name
+            if not name:
+                messages.error(request, "Please enter your full name.")
+                return render(request, 'billing/register.html')
+
+            # 2. Validate Email
+            if not email:
+                messages.error(request, "Please enter your email address.")
+                return render(request, 'billing/register.html')
+
+            if '@' not in email or '.' not in email:
+                messages.error(request, "Please enter a valid email address.")
+                return render(request, 'billing/register.html')
+
+            if User.objects.filter(email=email).exists():
+                messages.error(request, "An account with this email address already exists.")
+                return render(request, 'billing/register.html')
+
+            # 3. Validate Phone Number
+            if not phone:
+                messages.error(request, "Please enter your phone number.")
+                return render(request, 'billing/register.html')
+
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            if len(clean_phone) < 10:
+                messages.error(request, "Please enter a valid phone number (at least 10 digits).")
+                return render(request, 'billing/register.html')
+
+            if User.objects.filter(phone=phone).exists():
+                messages.error(request, "An account with this phone number already exists.")
+                return render(request, 'billing/register.html')
+
+            # 4. Validate Company Name
+            if not company_name:
+                messages.error(request, "Please enter your company / outlet name.")
+                return render(request, 'billing/register.html')
+
+            # 5. Validate Password
+            if not password:
+                messages.error(request, "Please enter a password.")
+                return render(request, 'billing/register.html')
+
+            if len(password) < 6:
+                messages.error(request, "Password must be at least 6 characters long.")
+                return render(request, 'billing/register.html')
+
+            # Complete registration after validation passes
             dist_id = f"DIST-{random.randint(10000, 99999)}"
 
             User.objects.create(
@@ -163,10 +210,10 @@ def distributor_register(request):
             return redirect('index')
 
         except Exception:
-            messages.error(request, "Registration failed! Email or Phone might already exist.")
-            return redirect('index')
+            messages.error(request, "Something went wrong. Please try again.")
+            return render(request, 'billing/register.html')
 
-    return redirect('index')
+    return render(request, 'billing/register.html')
 
 
 def generate_forgot_otp(request):

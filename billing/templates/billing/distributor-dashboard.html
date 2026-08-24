@@ -435,7 +435,15 @@
     <!-- Top Brand Header -->
     <header class="top-header">
         <div class="brand-title" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
-            <div class="brand-logo">QR</div>
+            <div class="brand-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
+                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor"/>
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>Advance Billing System</h1>
                 <span>DISTRIBUTOR POS TERMINAL</span>
@@ -444,7 +452,8 @@
 
         <div class="header-actions">
             <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
-                🌙 Dark Mode
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <span>Dark Mode</span>
             </button>
             <div class="status-badge">
                 <span class="dot"></span>

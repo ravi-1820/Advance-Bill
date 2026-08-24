@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advance Billing System with QR | Portal</title>
-    
+
     <!-- Unified Clean Stylesheet -->
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
 </head>
@@ -15,8 +15,18 @@
 
     <!-- TOP BRAND HEADER -->
     <header class="top-header">
-        <div class="brand-title">
-            <div class="brand-logo">QR</div>
+        <div class="brand-title" onclick="window.location.href='{% url 'index' %}'">
+            <div class="brand-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" />
+                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" />
+                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" />
+                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor" />
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>Advance Billing System</h1>
                 <span>ENTERPRISE QR SUITE</span>
@@ -25,7 +35,11 @@
 
         <div class="header-actions">
             <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
-                🌙 Dark
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span>Dark Mode</span>
             </button>
             <div class="status-badge">
                 <span class="dot"></span>
@@ -37,17 +51,23 @@
     <!-- MAIN LOGIN & REGISTRATION PORTAL CARD -->
     <main class="main-wrapper">
         <div class="auth-card">
-            
+
             <!-- LEFT HERO BRANDING SECTION -->
             <section class="hero-section">
                 <div>
                     <span class="hero-tag">SMART BILLING PLATFORM</span>
                     <h2>Smarter Invoices.<br>Instant QR Billing.</h2>
-                    <p>Manage invoices, QR transactions, stock inventory, and distributor settlements from one secure portal.</p>
+                    <p>Manage invoices, QR transactions, stock inventory, and distributor settlements from one secure
+                        portal.</p>
 
                     <div class="hero-features">
                         <div class="feature-box">
-                            <div class="feature-icon">⚡</div>
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                </svg>
+                            </div>
                             <div class="feature-text">
                                 <h4>Instant QR Billing</h4>
                                 <span>Fast payments</span>
@@ -55,7 +75,16 @@
                         </div>
 
                         <div class="feature-box">
-                            <div class="feature-icon">📦</div>
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                                    </path>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                </svg>
+                            </div>
                             <div class="feature-text">
                                 <h4>Inventory Ledger</h4>
                                 <span>Stock tracking</span>
@@ -63,7 +92,14 @@
                         </div>
 
                         <div class="feature-box">
-                            <div class="feature-icon">📊</div>
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                            </div>
                             <div class="feature-text">
                                 <h4>Reports & Insights</h4>
                                 <span>Real-time data</span>
@@ -71,7 +107,12 @@
                         </div>
 
                         <div class="feature-box">
-                            <div class="feature-icon">🛡️</div>
+                            <div class="feature-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            </div>
                             <div class="feature-text">
                                 <h4>Secure Gateway</h4>
                                 <span>256-Bit SSL</span>
@@ -95,23 +136,24 @@
 
                 <!-- Django Feedback Messages -->
                 {% if messages %}
-                    <div style="margin-bottom: 1rem;">
-                        {% for message in messages %}
-                            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
+                <div style="margin-bottom: 1rem;">
+                    {% for message in messages %}
+                    <div
+                        style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
+                        {{ message }}
                     </div>
+                    {% endfor %}
+                </div>
                 {% endif %}
 
                 <!-- ROLE SELECTION SWITCHER -->
                 <div class="role-switch">
                     <button type="button" class="role-btn active" onclick="App.setRole('distributor')">
-                        🛒 Distributor
+                        Distributor Workspace
                     </button>
-                    <button type="button" class="role-btn" onclick="App.setRole('admin')">
-                        ⚙️ Admin Access
-                    </button>
+                    <a href="{% url 'admin_login' %}" class="role-btn" style="text-decoration: none; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center;">
+                        Admin Access
+                    </a>
                 </div>
 
 
@@ -119,9 +161,12 @@
                 <div id="form-distributor">
                     <!-- Distributor Sub-Tabs -->
                     <div class="sub-nav">
-                        <button type="button" class="sub-btn active" onclick="App.setSubTab('password')">🔑 Sign In</button>
-                        <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">📲 Mobile Login</button>
-                        <button type="button" class="sub-btn" onclick="App.setSubTab('register')">📝 Register</button>
+                        <button type="button" class="sub-btn active" onclick="App.setSubTab('password')">Sign
+                            In</button>
+                        <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">Mobile Login</button>
+                        <a href="{% url 'distributor_register' %}" class="sub-btn"
+                            style="text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Register
+                            Account</a>
                     </div>
 
                     <!-- Password Login Form -->
@@ -133,25 +178,50 @@
                                     <label>Distributor ID or Email</label>
                                 </div>
                                 <div class="input-box">
-                                    <span class="icon">👤</span>
-                                    <input type="text" name="identity" class="input-field" placeholder="e.g. DIST-77492 or email" required>
+                                    <span class="icon">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
+                                        </svg>
+                                    </span>
+                                    <input type="text" name="identity" class="input-field"
+                                        placeholder="Dist-id or Email" required>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <div class="label-row">
                                     <label>Password</label>
-                                    <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
+                                    <button type="button" class="link-btn" onclick="App.openModal()">Forgot
+                                        password?</button>
                                 </div>
                                 <div class="input-box">
-                                    <span class="icon">🔒</span>
-                                    <input type="password" id="dist-pass" name="password" class="input-field" placeholder="Enter password" required>
-                                    <button type="button" class="eye-btn" onclick="App.togglePassword('dist-pass', this)">👁️</button>
+                                    <span class="icon">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                        </svg>
+                                    </span>
+                                    <input type="password" id="dist-pass" name="password" class="input-field"
+                                        placeholder="Enter password" required>
+                                    <button type="button" class="eye-btn"
+                                        onclick="App.togglePassword('dist-pass', this)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
 
                             <button type="submit" class="btn-primary">
-                                🚀 Sign In to Distributor POS
+                                Sign In Distributor
                             </button>
                         </form>
                     </div>
@@ -163,8 +233,17 @@
                             <div class="form-group">
                                 <div class="label-row"><label>Mobile Number</label></div>
                                 <div class="input-box">
-                                    <span class="icon">📞</span>
-                                    <input type="tel" name="mobile" class="input-field" placeholder="e.g. 94095369850" required>
+                                    <span class="icon">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path
+                                                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                                            </path>
+                                        </svg>
+                                    </span>
+                                    <input type="tel" name="mobile" class="input-field" placeholder="Enter Number"
+                                        required>
                                 </div>
                             </div>
 
@@ -173,98 +252,24 @@
                                     <label>Password</label>
                                 </div>
                                 <div class="input-box">
-                                    <span class="icon">🔒</span>
-                                    <input type="password" id="mobile-pass" name="password" class="input-field" placeholder="Enter password" required>
+                                    <span class="icon">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                        </svg>
+                                    </span>
+                                    <input type="password" id="mobile-pass" name="password" class="input-field"
+                                        placeholder="Enter password" required>
                                 </div>
                             </div>
 
                             <button type="submit" class="btn-primary">
-                                📲 Verify & Enter POS
+                                Verify & Enter POS
                             </button>
                         </form>
                     </div>
-
-                    <!-- Distributor Registration Form -->
-                    <div id="sub-register" style="display: none;">
-                        <form action="{% url 'distributor_register' %}" method="POST">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <div class="label-row"><label>Full Name</label></div>
-                                <div class="input-box">
-                                    <span class="icon">👤</span>
-                                    <input type="text" name="name" class="input-field" placeholder="John Doe" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <div class="label-row"><label>Email Address</label></div>
-                                <div class="input-box">
-                                    <span class="icon">✉️</span>
-                                    <input type="email" name="email" class="input-field" placeholder="distributor@company.com" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <div class="label-row"><label>Phone / Mobile Number</label></div>
-                                <div class="input-box">
-                                    <span class="icon">📞</span>
-                                    <input type="tel" name="phone" class="input-field" placeholder="+91 98765 43210" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <div class="label-row"><label>Company / Outlet Name</label></div>
-                                <div class="input-box">
-                                    <span class="icon">🏢</span>
-                                    <input type="text" name="company_name" class="input-field" placeholder="Apex Traders" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <div class="label-row"><label>Password</label></div>
-                                <div class="input-box">
-                                    <span class="icon">🔒</span>
-                                    <input type="password" id="reg-pass" name="password" class="input-field" placeholder="Create strong password" required>
-                                    <button type="button" class="eye-btn" onclick="App.togglePassword('reg-pass', this)">👁️</button>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #06b6d4, #2563eb);">
-                                📝 Register Distributor Account
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-
-                <!-- 2. ADMIN FORM -->
-                <div id="form-admin" style="display: none;">
-                    <form action="{% url 'admin_login' %}" method="POST">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <div class="label-row"><label>Admin Email Address or Username</label></div>
-                            <div class="input-box">
-                                <span class="icon">✉️</span>
-                                <input type="text" name="admin_email" class="input-field" placeholder="admin@advancebilling.com" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <div class="label-row">
-                                <label>Master Password</label>
-                                <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
-                            </div>
-                            <div class="input-box">
-                                <span class="icon">🔐</span>
-                                <input type="password" id="admin-pass" name="admin_password" class="input-field" placeholder="Enter master password" required>
-                                <button type="button" class="eye-btn" onclick="App.togglePassword('admin-pass', this)">👁️</button>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-primary" style="background: var(--admin-primary);">
-                            🛡️ Authenticate Admin Portal
-                        </button>
-                    </form>
                 </div>
 
             </section>
@@ -279,42 +284,71 @@
 
             <!-- STEP 1: Enter Email/Phone -->
             <div id="step-1">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered email or mobile to receive a 6-digit OTP.</p>
-                
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password
+                </h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered
+                    email or mobile to receive a 6-digit OTP.</p>
+
                 <form onsubmit="handleSendOTP(event)">
                     {% csrf_token %}
                     <div class="form-group">
                         <div class="input-box">
-                            <span class="icon">✉️</span>
-                            <input type="text" id="forgot-identity" class="input-field" placeholder="email or phone number" required>
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
+                                    </path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                            </span>
+                            <input type="text" id="forgot-identity" class="input-field"
+                                placeholder="email or phone number" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">📩 Send Security OTP</button>
+                    <button type="submit" class="btn-primary">Send Security OTP</button>
                 </form>
             </div>
 
             <!-- STEP 2: Verify OTP & Reset Password -->
             <div id="step-2" style="display: none;">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify OTP & Set New Password</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter the 6-digit OTP and your new password.</p>
-                
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify OTP & Set
+                    New Password</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter the 6-digit OTP and
+                    your new password.</p>
+
                 <form onsubmit="handleVerifyReset(event)">
                     {% csrf_token %}
                     <div class="form-group">
                         <div class="input-box">
-                            <span class="icon">🔢</span>
-                            <input type="text" id="otp-code" maxlength="6" class="input-field" placeholder="6-digit OTP" required>
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="4" y1="9" x2="20" y2="9"></line>
+                                    <line x1="4" y1="15" x2="20" y2="15"></line>
+                                    <line x1="10" y1="3" x2="8" y2="21"></line>
+                                    <line x1="16" y1="3" x2="14" y2="21"></line>
+                                </svg>
+                            </span>
+                            <input type="text" id="otp-code" maxlength="6" class="input-field" placeholder="6-digit OTP"
+                                required>
                         </div>
                     </div>
                     <div class="form-group">
                         <div class="input-box">
-                            <span class="icon">🔐</span>
-                            <input type="password" id="forgot-new-pass" class="input-field" placeholder="New Password" required>
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </span>
+                            <input type="password" id="forgot-new-pass" class="input-field" placeholder="New Password"
+                                required>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary">⚡ Verify OTP & Reset Password</button>
+                    <button type="submit" class="btn-primary">Verify OTP & Reset Password</button>
                 </form>
             </div>
 
@@ -335,24 +369,24 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': csrfToken
                 },
-                body: new URLSearchParams({'identity': identity})
+                body: new URLSearchParams({ 'identity': identity })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    App.toast(data.message);
-                    if (data.demo_otp) {
-                        alert(`Demo OTP Code: ${data.demo_otp}`);
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        App.toast(data.message);
+                        if (data.demo_otp) {
+                            alert(`Demo OTP Code: ${data.demo_otp}`);
+                        }
+                        document.getElementById('step-1').style.display = 'none';
+                        document.getElementById('step-2').style.display = 'block';
+                    } else {
+                        App.toast(data.message);
                     }
-                    document.getElementById('step-1').style.display = 'none';
-                    document.getElementById('step-2').style.display = 'block';
-                } else {
-                    App.toast(data.message);
-                }
-            })
-            .catch(err => {
-                App.toast('Error sending OTP.');
-            });
+                })
+                .catch(err => {
+                    App.toast('Error sending OTP.');
+                });
         }
 
         function handleVerifyReset(e) {
@@ -367,22 +401,22 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': csrfToken
                 },
-                body: new URLSearchParams({'otp': otp, 'new_password': newPassword})
+                body: new URLSearchParams({ 'otp': otp, 'new_password': newPassword })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    App.toast(data.message);
-                    alert(data.message);
-                    App.closeModal();
-                    window.location.reload();
-                } else {
-                    App.toast(data.message);
-                }
-            })
-            .catch(err => {
-                App.toast('Error resetting password.');
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        App.toast(data.message);
+                        alert(data.message);
+                        App.closeModal();
+                        window.location.reload();
+                    } else {
+                        App.toast(data.message);
+                    }
+                })
+                .catch(err => {
+                    App.toast('Error resetting password.');
+                });
         }
     </script>
 </body>
