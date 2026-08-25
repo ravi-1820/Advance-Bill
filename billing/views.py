@@ -141,36 +141,36 @@ def distributor_profile(request):
 
             if not name:
                 messages.error(request, "Please enter your full name.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if not email:
                 messages.error(request, "Please enter your email address.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if '@' not in email or '.' not in email:
                 messages.error(request, "Please enter a valid email address.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if User.objects.filter(email=email).exclude(id=user.id).exists():
                 messages.error(request, "An account with this email address already exists.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if not phone:
                 messages.error(request, "Please enter your phone number.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             clean_phone = ''.join(c for c in phone if c.isdigit())
             if len(clean_phone) < 10:
                 messages.error(request, "Please enter a valid phone number (at least 10 digits).")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if User.objects.filter(phone=phone).exclude(id=user.id).exists():
                 messages.error(request, "An account with this phone number already exists.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             if not company_name:
                 messages.error(request, "Please enter your company / outlet name.")
-                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user, 'is_edit_mode': True})
 
             user.name = name
             user.email = email
