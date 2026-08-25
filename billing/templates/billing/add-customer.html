@@ -1,0 +1,379 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Customer | Advance Billing System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --card-bg: #131b2e;
+            --card-elevated: #1a243d;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --dist-primary: #2563eb;
+            --dist-accent: #06b6d4;
+            --dist-glow: rgba(37, 99, 235, 0.3);
+        }
+
+        body.theme-light {
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --card-elevated: #f1f5f9;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
+        }
+
+        .top-header {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #2563eb, #06b6d4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+        }
+
+        .brand-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .brand-text span {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            color: #06b6d4;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 99px;
+            background: rgba(37, 99, 235, 0.12);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            color: #60a5fa;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #60a5fa;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #60a5fa;
+        }
+
+        .theme-toggle-btn {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-header-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+            flex-wrap: wrap;
+        }
+
+        .header-title-box h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header-title-box p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .btn-dash {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-dash:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-field-full {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            width: 100%;
+            height: 44px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0 14px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            border-color: var(--dist-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+        }
+
+        .form-textarea {
+            width: 100%;
+            min-height: 90px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+            resize: vertical;
+        }
+
+        .action-row {
+            margin-top: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+    </style>
+</head>
+
+<body class="theme-distributor">
+
+    <!-- Top Brand Header -->
+    <header class="top-header">
+        <div class="brand-title" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
+            <div class="brand-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
+                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
+                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>Advance Billing System</h1>
+                <span>ADD NEW CUSTOMER</span>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <span>Dark Mode</span>
+            </button>
+            <div class="status-badge">
+                <span class="dot"></span>
+                <span>AUTHENTICATED SESSION</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="form-container">
+
+        <!-- Top Header Card -->
+        <div class="form-header-card">
+            <div class="header-title-box">
+                <h2>👤 Add New Customer</h2>
+                <p>Register customer details for billing & invoicing ledgers</p>
+            </div>
+            <a href="{% url 'distributor_dashboard' %}" class="btn-dash">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Django Feedback Messages -->
+        {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div style="padding: 0.85rem 1.25rem; border-radius: 12px; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.75rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Form Card -->
+        <div class="form-card">
+            <form method="POST" action="{% url 'add_customer' %}">
+                {% csrf_token %}
+
+                <div class="form-grid">
+                    <!-- Customer Name -->
+                    <div class="form-field">
+                        <label class="form-label" for="name">Customer Full Name *</label>
+                        <input type="text" id="name" name="name" placeholder="Enter customer full name" class="form-input" required>
+                    </div>
+
+                    <!-- Email Address -->
+                    <div class="form-field">
+                        <label class="form-label" for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" placeholder="customer@example.com" class="form-input" required>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="form-field">
+                        <label class="form-label" for="phone">Phone / Mobile Number *</label>
+                        <input type="text" id="phone" name="phone" placeholder="Enter 10-digit mobile number" class="form-input" required>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="form-field-full">
+                        <label class="form-label" for="address">Address *</label>
+                        <textarea id="address" name="address" placeholder="Enter customer complete address" class="form-textarea" required></textarea>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="action-row">
+                    <a href="{% url 'distributor_dashboard' %}" class="btn-dash">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-dash" style="background: linear-gradient(135deg, #2563eb, #06b6d4); color: #ffffff; border: none; padding: 0.75rem 2rem; font-weight: 700;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Save Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="{% static 'assets/js/app.js' %}"></script>
+</body>
+
+</html>

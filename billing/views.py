@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from billing.models import User, OTP
+from billing.models import User, OTP, Customer
 
 
 def index(request):
@@ -190,6 +190,65 @@ def distributor_profile(request):
         return redirect('distributor_login')
     except Exception:
         return redirect('distributor_login')
+
+
+@csrf_exempt
+def add_customer(request):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+
+        if request.method == 'POST':
+            name = request.POST.get('name', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            address = request.POST.get('address', '').strip()
+
+            if not name:
+                messages.error(request, "Please enter customer name.")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            if not email:
+                messages.error(request, "Please enter customer email address.")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            if '@' not in email or '.' not in email:
+                messages.error(request, "Please enter a valid email address.")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            if not phone:
+                messages.error(request, "Please enter phone number.")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            if len(clean_phone) < 10:
+                messages.error(request, "Please enter a valid phone number (at least 10 digits).")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            if not address:
+                messages.error(request, "Please enter address.")
+                return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+
+            Customer.objects.create(
+                name=name,
+                email=email,
+                phone=phone,
+                address=address
+            )
+
+            messages.success(request, "Customer added successfully.")
+            return redirect('add_customer')
+
+        return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+    except User.DoesNotExist:
+        messages.error(request, "Access restricted to Distributors only..!")
+        return redirect('distributor_login')
+    except Exception:
+        return redirect('distributor_login')
+
 
 
 
