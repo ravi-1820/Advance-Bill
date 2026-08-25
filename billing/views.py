@@ -124,6 +124,7 @@ def distributor_dashboard(request):
         return redirect('index')
 
 
+@csrf_exempt
 def distributor_profile(request):
     try:
         user_id = request.session.get('user_id')
@@ -131,12 +132,65 @@ def distributor_profile(request):
             return redirect('distributor_login')
 
         user = User.objects.get(id=user_id, usertype='distributor')
+
+        if request.method == 'POST':
+            name = request.POST.get('name', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            company_name = request.POST.get('company_name', '').strip()
+
+            if not name:
+                messages.error(request, "Please enter your full name.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if not email:
+                messages.error(request, "Please enter your email address.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if '@' not in email or '.' not in email:
+                messages.error(request, "Please enter a valid email address.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if User.objects.filter(email=email).exclude(id=user.id).exists():
+                messages.error(request, "An account with this email address already exists.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if not phone:
+                messages.error(request, "Please enter your phone number.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            if len(clean_phone) < 10:
+                messages.error(request, "Please enter a valid phone number (at least 10 digits).")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if User.objects.filter(phone=phone).exclude(id=user.id).exists():
+                messages.error(request, "An account with this phone number already exists.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            if not company_name:
+                messages.error(request, "Please enter your company / outlet name.")
+                return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
+
+            user.name = name
+            user.email = email
+            user.phone = phone
+            user.company_name = company_name
+            user.save()
+
+            request.session['email'] = user.email
+            request.session['name'] = user.company_name or user.name
+
+            messages.success(request, "Profile updated successfully!")
+            return redirect('distributor_profile')
+
         return render(request, 'billing/distributor-profile.html', {'user': user, 'profile': user})
     except User.DoesNotExist:
         messages.error(request, "Access restricted to Distributors only..!")
         return redirect('distributor_login')
     except Exception:
         return redirect('distributor_login')
+
 
 
 def admin_dashboard(request):
