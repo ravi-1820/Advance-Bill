@@ -241,7 +241,7 @@ def add_customer(request):
             )
 
             messages.success(request, "Customer added successfully.")
-            return redirect('add_customer')
+            return redirect('customer_list')
 
         return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
     except User.DoesNotExist:
