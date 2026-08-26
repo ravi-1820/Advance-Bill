@@ -338,6 +338,25 @@ def edit_customer(request, id):
         return redirect('customer_list')
 
 
+def delete_customer(request, id):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+        customer = Customer.objects.get(id=id)
+        customer.delete()
+
+        messages.success(request, "Customer deleted successfully.")
+        return redirect('customer_list')
+    except (User.DoesNotExist, Customer.DoesNotExist):
+        messages.error(request, "Customer not found.")
+        return redirect('customer_list')
+    except Exception:
+        return redirect('customer_list')
+
+
 def admin_dashboard(request):
     try:
         user_id = request.session.get('user_id')
