@@ -11,6 +11,7 @@ urlpatterns = [
     path('distributor-dashboard/', views.distributor_dashboard, name='distributor_dashboard'),
     path('distributor-profile/', views.distributor_profile, name='distributor_profile'),
     path('add-customer/', views.add_customer, name='add_customer'),
+    path('customer-list/', views.customer_list, name='customer_list'),
     path('distributor-register/', views.distributor_register, name='distributor_register'),
     path('register/', views.distributor_register, name='register'),
     path('forgot-password/generate-otp/', views.generate_forgot_otp, name='generate_forgot_otp'),
