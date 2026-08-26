@@ -280,6 +280,64 @@ def customer_list(request):
         return redirect('distributor_login')
 
 
+@csrf_exempt
+def edit_customer(request, id):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+        customer = Customer.objects.get(id=id)
+
+        if request.method == 'POST':
+            name = request.POST.get('name', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            address = request.POST.get('address', '').strip()
+
+            if not name:
+                messages.error(request, "Please enter customer name.")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            if not email:
+                messages.error(request, "Please enter customer email address.")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            if '@' not in email or '.' not in email:
+                messages.error(request, "Please enter a valid email address.")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            if not phone:
+                messages.error(request, "Please enter phone number.")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            clean_phone = ''.join(c for c in phone if c.isdigit())
+            if len(clean_phone) < 10:
+                messages.error(request, "Please enter a valid phone number (at least 10 digits).")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            if not address:
+                messages.error(request, "Please enter address.")
+                return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+
+            customer.name = name
+            customer.email = email
+            customer.phone = phone
+            customer.address = address
+            customer.save()
+
+            messages.success(request, "Customer updated successfully.")
+            return redirect('customer_list')
+
+        return render(request, 'billing/edit-customer.html', {'user': user, 'profile': user, 'customer': customer})
+    except (User.DoesNotExist, Customer.DoesNotExist):
+        messages.error(request, "Customer not found.")
+        return redirect('customer_list')
+    except Exception:
+        return redirect('customer_list')
+
+
 def admin_dashboard(request):
     try:
         user_id = request.session.get('user_id')

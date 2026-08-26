@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Directory | Advance Billing System</title>
+    <title>Edit Customer | Advance Billing System</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,10 +194,10 @@
             box-shadow: 0 0 8px #22c55e;
         }
 
-        /* Main Layout */
+        /* Main Container */
         .main-container {
             width: 100%;
-            max-width: 1280px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 1.75rem 1.5rem 3rem 1.5rem;
             display: flex;
@@ -234,34 +234,37 @@
             color: var(--text-muted);
         }
 
-        .header-buttons {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
         }
 
-        /* Form Search Bar */
-        .search-row {
+        .form-field {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        .search-form {
+        .form-field-full {
+            grid-column: 1 / -1;
             display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-            max-width: 480px;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
         }
 
         .form-input {
             width: 100%;
-            height: 40px;
+            height: 42px;
             background: var(--card-elevated);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -272,56 +275,31 @@
             transition: all 0.15s ease;
         }
 
-        .form-input:focus {
+        .form-input:focus, .form-textarea:focus {
             border-color: var(--dist-primary);
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
 
-        /* Shadcn Table Components */
-        .table-wrap {
+        .form-textarea {
             width: 100%;
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .shadcn-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        .shadcn-table th {
+            min-height: 90px;
             background: var(--card-elevated);
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .shadcn-table td {
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
             color: var(--text-primary);
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.15s ease;
+            resize: vertical;
         }
 
-        .shadcn-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .shadcn-table tr:hover td {
-            background: rgba(255, 255, 255, 0.015);
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
-            font-size: 0.9rem;
+        .action-row {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
         }
     </style>
 </head>
@@ -342,7 +320,7 @@
                 </div>
                 <div class="brand-titles">
                     <h1>Advance Billing</h1>
-                    <span>Customer Directory</span>
+                    <span>Edit Customer</span>
                 </div>
             </a>
 
@@ -369,25 +347,16 @@
         <div class="shadcn-card">
             <div class="header-banner">
                 <div class="title-meta">
-                    <h2>Customer Directory</h2>
-                    <p>View, filter, and search registered billing customers</p>
+                    <h2>Edit Customer Info</h2>
+                    <p>Update registered customer details for billing ledgers</p>
                 </div>
-                <div class="header-buttons">
-                    <a href="{% url 'add_customer' %}" class="btn-shadcn btn-primary">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="12" y1="5" x2="12" y2="19"/>
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                        </svg>
-                        <span>Add Customer</span>
-                    </a>
-                    <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="19" y1="12" x2="5" y2="12"/>
-                            <polyline points="12 19 5 12 12 5"/>
-                        </svg>
-                        <span>Back to Dashboard</span>
-                    </a>
-                </div>
+                <a href="{% url 'customer_list' %}" class="btn-shadcn btn-secondary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    <span>Back to Customer List</span>
+                </a>
             </div>
         </div>
 
@@ -402,58 +371,48 @@
         </div>
         {% endif %}
 
-        <!-- Content Card (Search + Table) -->
+        <!-- Form Card -->
         <div class="shadcn-card">
-            
-            <!-- Search Bar Row -->
-            <div class="search-row">
-                <form method="GET" action="{% url 'customer_list' %}" class="search-form">
-                    <input type="text" name="search" value="{{ search }}" placeholder="Search by name, email, or phone..." class="form-input">
-                    <button type="submit" class="btn-shadcn btn-primary" style="height: 40px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <span>Search</span>
+            <form method="POST" action="{% url 'edit_customer' customer.id %}">
+                {% csrf_token %}
+
+                <div class="form-grid">
+                    <!-- Customer Name -->
+                    <div class="form-field">
+                        <label class="form-label" for="name">Customer Full Name *</label>
+                        <input type="text" id="name" name="name" value="{{ customer.name }}" placeholder="Enter customer full name" class="form-input" required>
+                    </div>
+
+                    <!-- Email Address -->
+                    <div class="form-field">
+                        <label class="form-label" for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" value="{{ customer.email|default:'' }}" placeholder="customer@example.com" class="form-input" required>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="form-field">
+                        <label class="form-label" for="phone">Phone / Mobile Number *</label>
+                        <input type="text" id="phone" name="phone" value="{{ customer.phone }}" placeholder="Enter 10-digit mobile number" class="form-input" required>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="form-field-full">
+                        <label class="form-label" for="address">Address *</label>
+                        <textarea id="address" name="address" placeholder="Enter customer complete address" class="form-textarea" required>{{ customer.address|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="action-row">
+                    <a href="{% url 'customer_list' %}" class="btn-shadcn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-shadcn btn-primary" style="padding: 0.5rem 1.5rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span>Update Customer</span>
                     </button>
-                    {% if search %}
-                    <a href="{% url 'customer_list' %}" class="btn-shadcn btn-outline" style="height: 40px;">Clear</a>
-                    {% endif %}
-                </form>
-            </div>
-
-            <!-- Customer Table -->
-            <div class="table-wrap">
-                <table class="shadcn-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Address</th>
-                            <th style="text-align: right;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for customer in customers %}
-                        <tr>
-                            <td style="font-weight: 600;">{{ customer.name }}</td>
-                            <td>{{ customer.email|default:"-" }}</td>
-                            <td>{{ customer.phone }}</td>
-                            <td>{{ customer.address|default:"-" }}</td>
-                            <td style="text-align: right;">
-                                <a href="{% url 'edit_customer' customer.id %}" class="btn-shadcn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                    <span>Edit</span>
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="no-data">No customer found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
+                </div>
+            </form>
         </div>
     </main>
 

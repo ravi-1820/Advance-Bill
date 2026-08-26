@@ -12,6 +12,7 @@ urlpatterns = [
     path('distributor-profile/', views.distributor_profile, name='distributor_profile'),
     path('add-customer/', views.add_customer, name='add_customer'),
     path('customer-list/', views.customer_list, name='customer_list'),
+    path('edit-customer/<int:id>/', views.edit_customer, name='edit_customer'),
     path('distributor-register/', views.distributor_register, name='distributor_register'),
     path('register/', views.distributor_register, name='register'),
     path('forgot-password/generate-otp/', views.generate_forgot_otp, name='generate_forgot_otp'),
