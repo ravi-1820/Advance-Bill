@@ -9,20 +9,22 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
     <style>
         :root {
-            --bg-main: #0b0f19;
-            --card-bg: #131b2e;
-            --card-elevated: #1a243d;
-            --border: rgba(255, 255, 255, 0.08);
-            --border-hover: rgba(255, 255, 255, 0.18);
-            --text-primary: #f8fafc;
-            --text-muted: #94a3b8;
-            --dist-primary: #2563eb;
-            --dist-accent: #06b6d4;
-            --dist-glow: rgba(37, 99, 235, 0.3);
+            --bg-main: #09090b;
+            --card-bg: #121215;
+            --card-elevated: #18181b;
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --text-primary: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --dist-primary: #3b82f6;
+            --dist-accent: #0ea5e9;
+            --dist-glow: rgba(59, 130, 246, 0.15);
+            --badge-bg: #18181b;
+            --badge-text: #a1a1aa;
         }
 
         body.theme-light {
@@ -33,9 +35,14 @@
             --border-hover: #cbd5e1;
             --text-primary: #0f172a;
             --text-muted: #64748b;
+            --dist-primary: #2563eb;
+            --dist-accent: #0284c7;
+            --dist-glow: rgba(37, 99, 235, 0.1);
+            --badge-bg: #f1f5f9;
+            --badge-text: #475569;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         
         body {
             background-color: var(--bg-main);
@@ -43,211 +50,232 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            transition: background-color 0.3s ease, color 0.3s ease;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 40%);
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
 
-        .top-header {
+        /* Top Navigation Header */
+        .top-navbar {
             width: 100%;
-            max-width: 1100px;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-inner {
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 1.25rem 1.5rem;
+            padding: 0.85rem 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
         }
 
-        .brand-title {
+        .brand-container {
             display: flex;
             align-items: center;
             gap: 12px;
             cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
 
-        .brand-logo {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, #2563eb, #06b6d4);
-            border-radius: 12px;
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--dist-primary);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 1.15rem;
-            color: #fff;
-            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--dist-glow);
         }
 
-        .brand-text h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.2rem;
+        .brand-titles h1 {
+            font-size: 1rem;
             font-weight: 700;
-            line-height: 1.1;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: var(--text-primary);
         }
 
-        .brand-text span {
+        .brand-titles span {
             font-size: 0.7rem;
-            letter-spacing: 0.1em;
-            color: #06b6d4;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
             text-transform: uppercase;
-            font-weight: 700;
         }
 
-        .header-actions {
+        .nav-actions {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .status-badge {
+        /* Shadcn Buttons */
+        .btn-shadcn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            padding: 6px 14px;
-            border-radius: 99px;
-            background: rgba(37, 99, 235, 0.12);
-            border: 1px solid rgba(37, 99, 235, 0.25);
-            color: #60a5fa;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            background: #60a5fa;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #60a5fa;
-        }
-
-        .theme-toggle-btn {
-            background: var(--card-elevated);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 6px 14px;
-            border-radius: 99px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.25;
+            white-space: nowrap;
         }
 
-        .profile-container {
+        .btn-primary {
+            background: var(--dist-primary);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--card-elevated);
+            border-color: var(--border-hover);
+        }
+
+        /* Shadcn Badges */
+        .shadcn-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            border: 1px solid var(--border);
+        }
+
+        .badge-live {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+        }
+
+        /* Main Container */
+        .main-container {
             width: 100%;
             max-width: 1100px;
             margin: 0 auto;
-            padding: 0 1.5rem 3rem 1.5rem;
+            padding: 1.75rem 1.5rem 3rem 1.5rem;
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
 
-        .profile-header-card {
+        .shadcn-card {
             background: var(--card-bg);
             border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 2rem;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1.5rem;
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
             flex-wrap: wrap;
         }
 
-        .user-main-info {
+        .user-identity {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
-        .avatar-box {
-            width: 72px;
-            height: 72px;
-            background: linear-gradient(135deg, #2563eb, #06b6d4);
-            border-radius: 20px;
+        .avatar-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+            color: var(--dist-primary);
+            font-size: 1.25rem;
         }
 
-        .user-titles h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.65rem;
+        .user-meta h2 {
+            font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .role-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            background: rgba(6, 182, 212, 0.12);
-            border: 1px solid rgba(6, 182, 212, 0.25);
-            color: #06b6d4;
-            border-radius: 99px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-
-        .btn-dash {
-            background: var(--card-elevated);
-            border: 1px solid var(--border);
+            letter-spacing: -0.02em;
             color: var(--text-primary);
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-dash:hover {
-            border-color: var(--border-hover);
-            transform: translateY(-2px);
+            margin-bottom: 2px;
         }
 
         .profile-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
         }
 
         .info-card {
-            background: var(--card-bg);
+            background: var(--card-elevated);
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
+            border-radius: 10px;
+            padding: 1.25rem;
             display: flex;
             align-items: flex-start;
-            gap: 1.25rem;
-            transition: all 0.25 ease;
+            gap: 1rem;
+            transition: border-color 0.15s ease;
         }
 
         .info-card:hover {
             border-color: var(--border-hover);
-            transform: translateY(-2px);
         }
 
         .info-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: rgba(37, 99, 235, 0.12);
-            border: 1px solid rgba(37, 99, 235, 0.25);
-            color: #60a5fa;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--dist-primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -258,88 +286,116 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            width: 100%;
         }
 
         .info-label {
             font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.05em;
             color: var(--text-muted);
             font-weight: 600;
         }
 
         .info-val {
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 600;
             color: var(--text-primary);
             word-break: break-word;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 38px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0 10px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--dist-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
     </style>
 </head>
 
 <body class="theme-distributor">
 
-    <!-- Top Brand Header -->
-    <header class="top-header">
-        <div class="brand-title" onclick="window.location.href='{% url 'distributor_dashboard' %}'">
-            <div class="brand-logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
-                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
-                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
-                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor"/>
-                </svg>
-            </div>
-            <div class="brand-text">
-                <h1>Advance Billing System</h1>
-                <span>DISTRIBUTOR PROFILE PORTAL</span>
-            </div>
-        </div>
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+        <div class="nav-inner">
+            <a href="{% url 'distributor_dashboard' %}" class="brand-container">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="4" />
+                        <path d="M7 8h10" />
+                        <path d="M7 12h10" />
+                        <path d="M7 16h6" />
+                    </svg>
+                </div>
+                <div class="brand-titles">
+                    <h1>Advance Billing</h1>
+                    <span>Distributor Profile</span>
+                </div>
+            </a>
 
-        <div class="header-actions">
-            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                <span>Dark Mode</span>
-            </button>
-            <div class="status-badge">
-                <span class="dot"></span>
-                <span>AUTHENTICATED ACCOUNT</span>
+            <div class="nav-actions">
+                <button type="button" id="theme-toggle-btn" class="btn-shadcn btn-outline" onclick="App.toggleTheme()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <div class="shadcn-badge badge-live">
+                    <span class="pulse-dot"></span>
+                    <span>ONLINE SESSION</span>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Profile Container -->
-    <main class="profile-container">
+    <!-- Main Container -->
+    <main class="main-container">
 
         <!-- Top Profile Banner Card -->
-        <div class="profile-header-card">
-            <div class="user-main-info">
-                <div class="avatar-box">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
+        <div class="shadcn-card">
+            <div class="header-banner">
+                <div class="user-identity">
+                    <div class="avatar-ring">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <div class="user-meta">
+                        <h2>{{ user.name }}</h2>
+                        <span class="shadcn-badge">
+                            ID: {{ user.distributor_id }} &bull; POS Distributor
+                        </span>
+                    </div>
                 </div>
-                <div class="user-titles">
-                    <h2>{{ user.name }}</h2>
-                    <span class="role-badge">
-                        ID: {{ user.distributor_id }} &bull; POS DISTRIBUTOR
-                    </span>
-                </div>
-            </div>
 
-            <a href="{% url 'distributor_dashboard' %}" class="btn-dash">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                Back to Dashboard
-            </a>
+                <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    <span>Back to Dashboard</span>
+                </a>
+            </div>
         </div>
 
         <!-- Django Feedback Messages -->
         {% if messages %}
-        <div style="margin-bottom: 1rem;">
+        <div>
             {% for message in messages %}
-            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
+            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.75rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);{% else %}background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2);{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -348,170 +404,171 @@
 
         <!-- READ ONLY VIEW (Default) -->
         <div id="profile-read-view" style="{% if is_edit_mode %}display: none;{% else %}display: block;{% endif %}">
-            <div class="profile-grid">
-                <!-- Full Name Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Full Name</span>
-                        <span class="info-val">{{ user.name }}</span>
-                    </div>
-                </div>
-
-                <!-- Email Address Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Email Address</span>
-                        <span class="info-val">{{ user.email }}</span>
-                    </div>
-                </div>
-
-                <!-- Phone Number Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Phone / Mobile</span>
-                        <span class="info-val">{{ user.phone }}</span>
-                    </div>
-                </div>
-
-                <!-- Company Name Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"></path></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Company / Outlet Name</span>
-                        <span class="info-val">{{ user.company_name }}</span>
-                    </div>
-                </div>
-
-                <!-- Distributor ID Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="13" y2="12"></line><line x1="7" y1="16" x2="10" y2="16"></line></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Distributor ID</span>
-                        <span class="info-val" style="color: #60a5fa; font-family: monospace;">{{ user.distributor_id }}</span>
-                    </div>
-                </div>
-
-                <!-- Role Account Card -->
-                <div class="info-card">
-                    <div class="info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    </div>
-                    <div class="info-content">
-                        <span class="info-label">Account Role</span>
-                        <span class="info-val" style="color: #34d399;">Distributor Workspace</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Edit Profile Trigger Button -->
-            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('profile-read-view').style.display='none'; document.getElementById('profile-edit-view').style.display='block';" class="btn-dash" style="background: linear-gradient(135deg, #2563eb, #06b6d4); color: #ffffff; border: none; padding: 0.75rem 2rem; font-weight: 700;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    Edit Profile
-                </button>
-            </div>
-        </div>
-
-        <!-- EDITABLE FORM VIEW -->
-        <div id="profile-edit-view" style="{% if is_edit_mode %}display: block;{% else %}display: none;{% endif %}">
-            <form method="POST" action="{% url 'distributor_profile' %}">
-                {% csrf_token %}
-
-                <!-- Details Grid -->
+            <div class="shadcn-card">
                 <div class="profile-grid">
-
                     <!-- Full Name Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
-                            <label class="info-label" for="name">Full Name</label>
-                            <input type="text" id="name" name="name" value="{{ user.name }}" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px;" required>
+                        <div class="info-content">
+                            <span class="info-label">Full Name</span>
+                            <span class="info-val">{{ user.name }}</span>
                         </div>
                     </div>
 
                     <!-- Email Address Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
-                            <label class="info-label" for="email">Email Address</label>
-                            <input type="email" id="email" name="email" value="{{ user.email }}" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px;" required>
+                        <div class="info-content">
+                            <span class="info-label">Email Address</span>
+                            <span class="info-val">{{ user.email }}</span>
                         </div>
                     </div>
 
                     <!-- Phone Number Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
-                            <label class="info-label" for="phone">Phone / Mobile</label>
-                            <input type="text" id="phone" name="phone" value="{{ user.phone }}" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px;" required>
+                        <div class="info-content">
+                            <span class="info-label">Phone / Mobile</span>
+                            <span class="info-val">{{ user.phone }}</span>
                         </div>
                     </div>
 
                     <!-- Company Name Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
-                            <label class="info-label" for="company_name">Company / Outlet Name</label>
-                            <input type="text" id="company_name" name="company_name" value="{{ user.company_name }}" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px;" required>
+                        <div class="info-content">
+                            <span class="info-label">Company / Outlet Name</span>
+                            <span class="info-val">{{ user.company_name }}</span>
                         </div>
                     </div>
 
-                    <!-- Distributor ID Card (Read-only) -->
+                    <!-- Distributor ID Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="13" y2="12"></line><line x1="7" y1="16" x2="10" y2="16"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="13" y2="12"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
+                        <div class="info-content">
                             <span class="info-label">Distributor ID</span>
-                            <input type="text" value="{{ user.distributor_id }}" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px; color: #60a5fa; font-family: monospace; opacity: 0.8;" disabled>
+                            <span class="info-val" style="color: var(--dist-primary); font-family: monospace;">{{ user.distributor_id }}</span>
                         </div>
                     </div>
 
-                    <!-- Role Account Card (Read-only) -->
+                    <!-- Role Account Card -->
                     <div class="info-card">
                         <div class="info-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         </div>
-                        <div class="info-content" style="width: 100%;">
+                        <div class="info-content">
                             <span class="info-label">Account Role</span>
-                            <input type="text" value="Distributor Workspace" class="input-field" style="padding: 0 12px; height: 38px; margin-top: 4px; color: #34d399; opacity: 0.8;" disabled>
+                            <span class="info-val" style="color: #34d399;">Distributor Workspace</span>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- Action Buttons (Save Changes & Cancel) -->
-                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button type="button" onclick="document.getElementById('profile-edit-view').style.display='none'; document.getElementById('profile-read-view').style.display='block';" class="btn-dash">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-dash" style="background: linear-gradient(135deg, #2563eb, #06b6d4); color: #ffffff; border: none; padding: 0.75rem 2rem; font-weight: 700;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Save Changes
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('profile-read-view').style.display='none'; document.getElementById('profile-edit-view').style.display='block';" class="btn-shadcn btn-primary" style="padding: 0.5rem 1.5rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span>Edit Profile</span>
                     </button>
                 </div>
-            </form>
+            </div>
+        </div>
+
+        <!-- EDITABLE FORM VIEW -->
+        <div id="profile-edit-view" style="{% if is_edit_mode %}display: block;{% else %}display: none;{% endif %}">
+            <div class="shadcn-card">
+                <form method="POST" action="{% url 'distributor_profile' %}">
+                    {% csrf_token %}
+
+                    <div class="profile-grid">
+
+                        <!-- Full Name Card -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <label class="info-label" for="name">Full Name</label>
+                                <input type="text" id="name" name="name" value="{{ user.name }}" class="form-input" style="margin-top: 2px;" required>
+                            </div>
+                        </div>
+
+                        <!-- Email Address Card -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <label class="info-label" for="email">Email Address</label>
+                                <input type="email" id="email" name="email" value="{{ user.email }}" class="form-input" style="margin-top: 2px;" required>
+                            </div>
+                        </div>
+
+                        <!-- Phone Number Card -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <label class="info-label" for="phone">Phone / Mobile</label>
+                                <input type="text" id="phone" name="phone" value="{{ user.phone }}" class="form-input" style="margin-top: 2px;" required>
+                            </div>
+                        </div>
+
+                        <!-- Company Name Card -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <label class="info-label" for="company_name">Company / Outlet Name</label>
+                                <input type="text" id="company_name" name="company_name" value="{{ user.company_name }}" class="form-input" style="margin-top: 2px;" required>
+                            </div>
+                        </div>
+
+                        <!-- Distributor ID Card (Read-only) -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="13" y2="12"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <span class="info-label">Distributor ID</span>
+                                <input type="text" value="{{ user.distributor_id }}" class="form-input" style="margin-top: 2px; color: var(--dist-primary); font-family: monospace; opacity: 0.8;" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Role Account Card (Read-only) -->
+                        <div class="info-card">
+                            <div class="info-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <div class="info-content">
+                                <span class="info-label">Account Role</span>
+                                <input type="text" value="Distributor Workspace" class="form-input" style="margin-top: 2px; color: #34d399; opacity: 0.8;" disabled>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="document.getElementById('profile-edit-view').style.display='none'; document.getElementById('profile-read-view').style.display='block';" class="btn-shadcn btn-secondary">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-shadcn btn-primary" style="padding: 0.5rem 1.5rem;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
 

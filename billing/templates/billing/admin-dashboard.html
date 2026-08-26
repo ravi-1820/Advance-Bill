@@ -5,24 +5,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Workspace Dashboard | Advance Billing System with QR</title>
+    <title>Admin Dashboard | Advance Billing System</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
     <style>
         :root {
-            --bg-main: #0b0f19;
-            --card-bg: #131b2e;
-            --card-elevated: #1a243d;
-            --border: rgba(255, 255, 255, 0.08);
-            --border-hover: rgba(255, 255, 255, 0.18);
-            --text-primary: #f8fafc;
-            --text-muted: #94a3b8;
+            --bg-main: #09090b;
+            --card-bg: #121215;
+            --card-elevated: #18181b;
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --text-primary: #f4f4f5;
+            --text-muted: #a1a1aa;
             --admin-primary: #10b981;
             --admin-accent: #34d399;
-            --admin-glow: rgba(16, 185, 129, 0.3);
+            --admin-glow: rgba(16, 185, 129, 0.15);
+            --badge-bg: #18181b;
+            --badge-text: #a1a1aa;
         }
 
         body.theme-light {
@@ -33,9 +35,14 @@
             --border-hover: #cbd5e1;
             --text-primary: #0f172a;
             --text-muted: #64748b;
+            --admin-primary: #059669;
+            --admin-accent: #10b981;
+            --admin-glow: rgba(16, 185, 129, 0.1);
+            --badge-bg: #f1f5f9;
+            --badge-text: #475569;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         
         body {
             background-color: var(--bg-main);
@@ -43,422 +50,436 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            transition: background-color 0.3s ease, color 0.3s ease;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(52, 211, 153, 0.06) 0%, transparent 40%);
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
 
-        .top-header {
+        /* Top Navigation Header (Shadcn Navbar) */
+        .top-navbar {
             width: 100%;
-            max-width: 1240px;
-            margin: 0 auto;
-            padding: 1.25rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .brand-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-        }
-
-        .brand-logo {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, #10b981, #047857);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 1.15rem;
-            color: #fff;
-            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-        }
-
-        .brand-text h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
-            line-height: 1.1;
-        }
-
-        .brand-text span {
-            font-size: 0.7rem;
-            letter-spacing: 0.1em;
-            color: #34d399;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            border-radius: 99px;
-            background: rgba(16, 185, 129, 0.12);
-            border: 1px solid rgba(16, 185, 129, 0.25);
-            color: #34d399;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            background: #34d399;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #34d399;
-        }
-
-        .theme-toggle-btn {
-            background: var(--card-elevated);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 6px 14px;
-            border-radius: 99px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .theme-toggle-btn:hover {
-            transform: translateY(-1px);
-            border-color: var(--border-hover);
-        }
-
-        .dashboard-container {
-            width: 100%;
-            max-width: 1240px;
-            margin: 0 auto;
-            padding: 0 1.5rem 3rem 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .dash-header-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 1.5rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.5rem;
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-            flex-wrap: wrap;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 1.25rem;
-        }
-
-        .profile-avatar {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #10b981, #047857);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.6rem;
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
-        }
-
-        .user-details h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .role-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            background: rgba(16, 185, 129, 0.12);
-            border: 1px solid rgba(16, 185, 129, 0.25);
-            color: #34d399;
-            border-radius: 99px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-
-        .btn-exit {
-            background: rgba(239, 68, 68, 0.12);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #f87171;
-            padding: 0.65rem 1.4rem;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        .btn-exit:hover {
-            background: rgba(239, 68, 68, 0.25);
-            transform: translateY(-2px);
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-        }
-
-        .metric-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.4rem 1.6rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 1rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .metric-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--admin-primary);
-            border-radius: 4px 0 0 4px;
-        }
-
-        .metric-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--border-hover);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-        }
-
-        .metric-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .metric-title {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .metric-icon-box {
-            width: 38px;
-            height: 38px;
-            background: var(--card-elevated);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-        }
-
-        .metric-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--text-primary);
-        }
-
-        .metric-trend {
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .content-layout {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
-        }
-
-        @media (max-width: 900px) {
-            .content-layout { grid-template-columns: 1fr; }
-        }
-
-        .panel-box {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 1.75rem;
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-        }
-
-        .panel-header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 1rem;
             border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
-        .panel-header-row h3 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0.85rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--admin-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--admin-glow);
+        }
+
+        .brand-titles h1 {
+            font-size: 1rem;
             font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .brand-titles span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--admin-accent);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-actions {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .op-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        /* Shadcn Buttons */
+        .btn-shadcn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--admin-primary);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--card-elevated);
+            border-color: var(--border-hover);
+        }
+
+        .btn-destructive {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        .btn-destructive:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Shadcn Badges */
+        .shadcn-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            border: 1px solid var(--border);
+        }
+
+        .badge-live {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+        }
+
+        /* Main Container */
+        .dashboard-container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.75rem 1.5rem 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .shadcn-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .user-identity {
+            display: flex;
+            align-items: center;
             gap: 1rem;
         }
 
-        .op-card {
+        .avatar-ring {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
             background: var(--card-elevated);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 1.1rem 1.25rem;
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-            transition: all 0.2s ease;
-        }
-        .op-card:hover {
-            border-color: var(--admin-primary);
-            transform: translateY(-2px);
-        }
-
-        .op-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(16, 185, 129, 0.15);
-            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-            color: #34d399;
-        }
-
-        .op-text h4 {
-            font-size: 0.9rem;
+            color: var(--admin-accent);
+            font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: 3px;
         }
 
-        .op-text p {
+        .user-meta h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .user-meta p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 0.85rem;
+            transition: all 0.15s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .metric-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .metric-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--admin-accent);
+        }
+
+        .metric-number {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+        }
+
+        .metric-foot {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 960px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        .card-header-styled {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .card-desc {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+        }
+
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.85rem;
+        }
+
+        .feature-item {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            transition: all 0.15s ease;
+        }
+
+        .feature-item:hover {
+            border-color: var(--border-hover);
+        }
+
+        .feature-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--admin-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-details h4 {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .feature-details p {
             font-size: 0.78rem;
             color: var(--text-muted);
             line-height: 1.4;
         }
 
-        .btn-action-primary {
-            width: 100%;
-            padding: 0.85rem 1.25rem;
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: #fff;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-            transition: all 0.2s ease;
+        .widget-stack {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        .btn-action-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 22px rgba(16, 185, 129, 0.5);
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .btn-action-secondary {
-            width: 100%;
-            padding: 0.85rem 1.25rem;
+        .status-box {
             background: var(--card-elevated);
-            color: var(--text-primary);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .status-box-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            text-decoration: none;
+            justify-content: space-between;
+            font-size: 0.8rem;
         }
-        .btn-action-secondary:hover {
-            background: var(--border-hover);
-            transform: translateY(-2px);
+
+        .status-box-row span:first-child {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status-box-row span:last-child {
+            color: var(--text-primary);
+            font-weight: 600;
         }
     </style>
 </head>
 
 <body class="theme-admin">
 
-    <!-- Top Brand Header -->
-    <header class="top-header">
-        <div class="brand-title" onclick="window.location.href='{% url 'admin_dashboard' %}'">
-            <div class="brand-logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor"/>
-                    <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor"/>
-                    <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor"/>
-                    <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor"/>
-                </svg>
-            </div>
-            <div class="brand-text">
-                <h1>Advance Billing System</h1>
-                <span style="color: #34d399;">ADMIN CONTROL CENTER</span>
-            </div>
-        </div>
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+        <div class="nav-inner">
+            <a href="{% url 'admin_dashboard' %}" class="brand-container">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="4" />
+                        <path d="M7 8h10" />
+                        <path d="M7 12h10" />
+                        <path d="M7 16h6" />
+                    </svg>
+                </div>
+                <div class="brand-titles">
+                    <h1>Advance Billing</h1>
+                    <span>Admin Control Center</span>
+                </div>
+            </a>
 
-        <div class="header-actions">
-            <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="App.toggleTheme()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                <span>Dark Mode</span>
-            </button>
-            <div class="status-badge">
-                <span class="dot"></span>
-                <span>AUTHENTICATED ADMIN</span>
+            <div class="nav-actions">
+                <button type="button" id="theme-toggle-btn" class="btn-shadcn btn-outline" onclick="App.toggleTheme()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <div class="shadcn-badge badge-live">
+                    <span class="pulse-dot"></span>
+                    <span>ADMIN SECURITY MODE</span>
+                </div>
             </div>
         </div>
     </header>
@@ -466,111 +487,158 @@
     <!-- Main Dashboard Viewport -->
     <main class="dashboard-container">
         
-        <!-- Welcome User Card -->
-        <div class="dash-header-card">
-            <div class="user-profile">
-                <div class="profile-avatar">⚙️</div>
-                <div class="user-details">
-                    <h2 id="admin-name">{{ request.user.get_full_name|default:request.user.username }}</h2>
-                    <span class="role-tag">
-                        AUTHENTICATED ROLE: ADMIN
-                    </span>
+        <!-- Welcome Hero Banner Card -->
+        <div class="shadcn-card">
+            <div class="hero-banner">
+                <div class="user-identity">
+                    <div class="avatar-ring">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <div class="user-meta">
+                        <h2 id="admin-name">{{ request.user.get_full_name|default:request.user.username }}</h2>
+                        <p>Master Administrator &bull; Role: <strong style="color: var(--admin-accent);">Admin Superuser</strong></p>
+                    </div>
                 </div>
-            </div>
 
-            <a href="{% url 'logout' %}" class="btn-exit">
-                🚪 Sign Out
-            </a>
+                <a href="{% url 'logout' %}" class="btn-shadcn btn-destructive">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Sign Out</span>
+                </a>
+            </div>
         </div>
 
-        <!-- 4 Core Metric Cards -->
+        <!-- 4 Shadcn Metric Cards -->
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Total System Revenue</span>
-                    <div class="metric-icon-box">💎</div>
+                <div class="metric-top">
+                    <span class="metric-label">Total System Revenue</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="metric-value" style="color: #34d399;">₹ 48,92,400</div>
-                <div class="metric-trend" style="color: #34d399;">
-                    <span>↑ +18.6%</span> vs last month
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Active Distributors</span>
-                    <div class="metric-icon-box">🏪</div>
-                </div>
-                <div class="metric-value">210 Outlets</div>
-                <div class="metric-trend" style="color: #60a5fa;">
-                    <span>✓ 100% Active POS</span>
+                <div class="metric-number" style="color: var(--admin-accent);">₹ 48,92,400</div>
+                <div class="metric-foot" style="color: var(--admin-accent);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                    <span>+18.6% vs last month</span>
                 </div>
             </div>
 
             <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">QR Billing Gateway</span>
-                    <div class="metric-icon-box">⚡</div>
+                <div class="metric-top">
+                    <span class="metric-label">Active Distributors</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="metric-value" style="color: #60a5fa;">Active (v4.2)</div>
-                <div class="metric-trend" style="color: #34d399;">
-                    <span>● 0% Latency Drop</span>
+                <div class="metric-number">210 Outlets</div>
+                <div class="metric-foot">
+                    <span>100% Active POS Terminals</span>
                 </div>
             </div>
 
             <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Pending Applications</span>
-                    <div class="metric-icon-box">📋</div>
+                <div class="metric-top">
+                    <span class="metric-label">QR Billing Gateway</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="metric-value" style="color: #f59e0b;">3 Outlets</div>
-                <div class="metric-trend" style="color: #f59e0b;">
-                    <span>⏳ Awaiting Verification</span>
+                <div class="metric-number" style="color: #60a5fa;">Active (v4.2)</div>
+                <div class="metric-foot" style="color: var(--admin-accent);">
+                    <span class="pulse-dot"></span>
+                    <span>0% Latency Drop</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">Pending Applications</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="metric-number" style="color: #f59e0b;">3 Outlets</div>
+                <div class="metric-foot" style="color: #f59e0b;">
+                    <span>Awaiting Verification</span>
                 </div>
             </div>
         </div>
 
-        <!-- Content Grid Layout -->
-        <div class="content-layout">
+        <!-- Main Content Layout -->
+        <div class="content-grid">
+            
             <!-- Left Main Operations Panel -->
-            <div class="panel-box">
-                <div class="panel-header-row">
-                    <h3>👑 Admin Control Dashboard</h3>
-                    <span style="font-size: 0.8rem; color: #34d399; font-weight: 600;">System v4.2</span>
+            <div class="shadcn-card">
+                <div class="card-header-styled">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <span>Admin Control Console</span>
+                    </div>
+                    <span class="shadcn-badge" style="color: var(--admin-accent);">System v4.2</span>
                 </div>
-                
-                <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6;">
+
+                <p class="card-desc">
                     Master administrative workspace. Configure system rate cards, audit global QR invoice logs, approve distributor onboarding, and manage credit allocations.
                 </p>
 
-                <div class="op-list">
-                    <div class="op-card">
-                        <div class="op-icon">🔑</div>
-                        <div class="op-text">
-                            <h4>QR Security Signature Keys</h4>
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <div class="feature-details">
+                            <h4>QR Security Payload Keys</h4>
                             <p>Update master cryptographic keys used for signing invoice QR payment payloads.</p>
                         </div>
                     </div>
 
-                    <div class="op-card">
-                        <div class="op-icon">🏦</div>
-                        <div class="op-text">
+                    <div class="feature-item">
+                        <div class="feature-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/></svg>
+                        </div>
+                        <div class="feature-details">
                             <h4>Distributor Credit Control</h4>
                             <p>Manage credit limits, daily invoice thresholds, and onboarding approvals.</p>
                         </div>
                     </div>
 
-                    <div class="op-card">
-                        <div class="op-icon">📊</div>
-                        <div class="op-text">
+                    <div class="feature-item">
+                        <div class="feature-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        </div>
+                        <div class="feature-details">
                             <h4>Tax & Audit Export</h4>
                             <p>Generate GST-compliant tax breakdown logs and audit reports in real time.</p>
                         </div>
                     </div>
 
-                    <div class="op-card">
-                        <div class="op-icon">🛡️</div>
-                        <div class="op-text">
+                    <div class="feature-item">
+                        <div class="feature-icon-box">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <div class="feature-details">
                             <h4>System Health Monitor</h4>
                             <p>Monitor uptime, API gateway response times, and payment webhook callbacks.</p>
                         </div>
@@ -578,25 +646,53 @@
                 </div>
             </div>
 
-            <!-- Right Quick Navigation Panel -->
-            <div class="panel-box">
-                <div class="panel-header-row">
-                    <h3>⚡ Quick Navigation</h3>
+            <!-- Right Actions & Widget Stack -->
+            <div class="widget-stack">
+                <div class="shadcn-card">
+                    <div class="card-header-styled" style="margin-bottom: 0.85rem; padding-bottom: 0.75rem;">
+                        <div class="card-title" style="font-size: 0.95rem;">
+                            <span>Quick Actions</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <a href="{% url 'logout' %}" class="btn-shadcn btn-primary" style="width: 100%;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Sign Out Admin</span>
+                        </a>
+                    </div>
                 </div>
 
-                <a href="{% url 'logout' %}" class="btn-action-primary">
-                    🏠 Sign Out & Return Home
-                </a>
+                <!-- Status Card -->
+                <div class="shadcn-card">
+                    <div class="card-header-styled" style="margin-bottom: 0.75rem; padding-bottom: 0.65rem;">
+                        <div class="card-title" style="font-size: 0.9rem;">
+                            <span>Admin Status</span>
+                        </div>
+                        <span class="shadcn-badge badge-live">Verified</span>
+                    </div>
 
-                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 12px; margin-top: 0.5rem;">
-                    <h5 style="color: #34d399; margin-bottom: 0.4rem; font-size: 0.85rem; font-weight: 700;">Admin Session</h5>
-                    <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-                        User: <strong style="color: var(--text-primary);">{{ request.user.username }}</strong><br>
-                        Email: <strong style="color: var(--text-primary);">{{ request.user.email }}</strong><br>
-                        Auth: <strong style="color: #34d399;">Superuser Staff</strong>
-                    </p>
+                    <div class="status-box">
+                        <div class="status-box-row">
+                            <span>Username</span>
+                            <span>{{ request.user.username }}</span>
+                        </div>
+                        <div class="status-box-row">
+                            <span>Email</span>
+                            <span>{{ request.user.email }}</span>
+                        </div>
+                        <div class="status-box-row">
+                            <span>Role</span>
+                            <span style="color: var(--admin-accent);">Admin Superuser</span>
+                        </div>
+                        <div class="status-box-row">
+                            <span>Status</span>
+                            <span style="color: #34d399;">Authenticated</span>
+                        </div>
+                    </div>
                 </div>
             </div>
+
         </div>
 
     </main>
