@@ -497,10 +497,21 @@
                     </svg>
                     <span>Theme</span>
                 </button>
-                <div class="shadcn-badge badge-live">
-                    <span class="pulse-dot"></span>
-                    <span>ONLINE SESSION</span>
-                </div>
+                <a href="{% url 'distributor_profile' %}" class="btn-shadcn btn-outline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Profile</span>
+                </a>
+                <a href="{% url 'logout' %}" class="btn-shadcn btn-destructive">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </a>
             </div>
         </div>
     </header>
@@ -523,41 +534,6 @@
                         <h2 id="distributor-name">{{ profile.company_name|default:request.user.username }}</h2>
                         <p>Distributor Account &bull; ID: <strong style="color: var(--dist-primary);">{{ profile.distributor_id }}</strong></p>
                     </div>
-                </div>
-
-                <div class="hero-actions-row">
-                    <a href="{% url 'customer_list' %}" class="btn-shadcn btn-secondary">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        <span>Customer Directory</span>
-                    </a>
-                    <a href="{% url 'add_customer' %}" class="btn-shadcn btn-primary">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14"/>
-                            <path d="M12 5v14"/>
-                        </svg>
-                        <span>Add Customer</span>
-                    </a>
-                    <a href="{% url 'distributor_profile' %}" class="btn-shadcn btn-outline">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 16v-4"/>
-                            <path d="M12 8h.01"/>
-                        </svg>
-                        <span>Profile</span>
-                    </a>
-                    <a href="{% url 'logout' %}" class="btn-shadcn btn-destructive">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
-                        <span>Exit Session</span>
-                    </a>
                 </div>
             </div>
         </div>
