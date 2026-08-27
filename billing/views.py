@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
+from django.core.paginator import Paginator
 from billing.models import User, OTP, Customer, Product
 
 
@@ -335,6 +336,42 @@ def add_product(request):
 
         return render(request, 'billing/add-product.html', {'user': user, 'profile': user})
 
+    except User.DoesNotExist:
+        messages.error(request, "Access restricted to Distributors only..!")
+        return redirect('distributor_login')
+    except Exception:
+        return redirect('distributor_login')
+
+
+def product_list(request):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+
+        search = request.GET.get('search', '').strip()
+        if search:
+            products_qs = Product.objects.filter(
+                Q(name__icontains=search) | Q(category__icontains=search)
+            ).order_by('-id')
+        else:
+            products_qs = Product.objects.all().order_by('-id')
+
+        total_products = Product.objects.count()
+
+        paginator = Paginator(products_qs, 10)
+        page_number = request.GET.get('page', 1)
+        products = paginator.get_page(page_number)
+
+        return render(request, 'billing/product-list.html', {
+            'user': user,
+            'profile': user,
+            'products': products,
+            'search': search,
+            'total_products': total_products
+        })
     except User.DoesNotExist:
         messages.error(request, "Access restricted to Distributors only..!")
         return redirect('distributor_login')
