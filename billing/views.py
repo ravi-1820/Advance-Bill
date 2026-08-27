@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
-from billing.models import User, OTP, Customer
+from billing.models import User, OTP, Customer, Product
 
 
 def index(request):
@@ -244,6 +244,97 @@ def add_customer(request):
             return redirect('customer_list')
 
         return render(request, 'billing/add-customer.html', {'user': user, 'profile': user})
+    except User.DoesNotExist:
+        messages.error(request, "Access restricted to Distributors only..!")
+        return redirect('distributor_login')
+    except Exception:
+        return redirect('distributor_login')
+
+
+@csrf_exempt
+def add_product(request):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+
+        if request.method == 'POST':
+            name = request.POST.get('name', '').strip()
+            category = request.POST.get('category', '').strip()
+            price_str = request.POST.get('price', '').strip()
+            stock_str = request.POST.get('stock', '').strip()
+            gst_rate_str = request.POST.get('gst_rate', '').strip()
+
+            context = {
+                'user': user,
+                'profile': user,
+                'name': name,
+                'category': category,
+                'price': price_str,
+                'stock': stock_str,
+                'gst_rate': gst_rate_str
+            }
+
+            if not name:
+                messages.error(request, "Please enter product name.")
+                return render(request, 'billing/add-product.html', context)
+
+            if not category:
+                messages.error(request, "Please enter category.")
+                return render(request, 'billing/add-product.html', context)
+
+            if not price_str:
+                messages.error(request, "Price must be greater than 0.")
+                return render(request, 'billing/add-product.html', context)
+
+            try:
+                price = float(price_str)
+                if price <= 0:
+                    messages.error(request, "Price must be greater than 0.")
+                    return render(request, 'billing/add-product.html', context)
+            except ValueError:
+                messages.error(request, "Price must be greater than 0.")
+                return render(request, 'billing/add-product.html', context)
+
+            if not stock_str:
+                messages.error(request, "Stock cannot be negative.")
+                return render(request, 'billing/add-product.html', context)
+
+            try:
+                stock = int(stock_str)
+                if stock < 0:
+                    messages.error(request, "Stock cannot be negative.")
+                    return render(request, 'billing/add-product.html', context)
+            except ValueError:
+                messages.error(request, "Stock cannot be negative.")
+                return render(request, 'billing/add-product.html', context)
+
+            gst_rate = 0.0
+            if gst_rate_str:
+                try:
+                    gst_rate = float(gst_rate_str)
+                    if gst_rate < 0:
+                        messages.error(request, "GST rate cannot be negative.")
+                        return render(request, 'billing/add-product.html', context)
+                except ValueError:
+                    messages.error(request, "Please enter a valid GST rate.")
+                    return render(request, 'billing/add-product.html', context)
+
+            Product.objects.create(
+                name=name,
+                category=category,
+                price=price,
+                stock=stock,
+                gst_rate=gst_rate
+            )
+
+            messages.success(request, "Product added successfully.")
+            return redirect('distributor_dashboard')
+
+        return render(request, 'billing/add-product.html', {'user': user, 'profile': user})
+
     except User.DoesNotExist:
         messages.error(request, "Access restricted to Distributors only..!")
         return redirect('distributor_login')

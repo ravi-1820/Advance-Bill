@@ -1,0 +1,390 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product | Advance Billing System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
+    <style>
+        :root {
+            --bg-main: #09090b;
+            --card-bg: #121215;
+            --card-elevated: #18181b;
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --text-primary: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --dist-primary: #3b82f6;
+            --dist-accent: #0ea5e9;
+            --dist-glow: rgba(59, 130, 246, 0.15);
+            --badge-bg: #18181b;
+            --badge-text: #a1a1aa;
+        }
+
+        body.theme-light {
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --card-elevated: #f1f5f9;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            --dist-primary: #2563eb;
+            --dist-accent: #0284c7;
+            --dist-glow: rgba(37, 99, 235, 0.1);
+            --badge-bg: #f1f5f9;
+            --badge-text: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Top Navigation Header */
+        .top-navbar {
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0.85rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--dist-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--dist-glow);
+        }
+
+        .brand-titles h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .brand-titles span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Shadcn Buttons */
+        .btn-shadcn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--dist-primary);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--card-elevated);
+            border-color: var(--border-hover);
+        }
+
+        /* Main Container */
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.75rem 1.5rem 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .shadcn-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .title-meta h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .title-meta p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            width: 100%;
+            height: 42px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 12px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--dist-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .action-row {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body class="theme-distributor">
+
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+        <div class="nav-inner">
+            <a href="{% url 'distributor_dashboard' %}" class="brand-container">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="4" />
+                        <path d="M7 8h10" />
+                        <path d="M7 12h10" />
+                        <path d="M7 16h6" />
+                    </svg>
+                </div>
+                <div class="brand-titles">
+                    <h1>Advance Billing</h1>
+                    <span>Add New Product</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <button type="button" id="theme-toggle-btn" class="btn-shadcn btn-outline" onclick="App.toggleTheme()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <a href="{% url 'distributor_profile' %}" class="btn-shadcn btn-outline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Profile</span>
+                </a>
+                <a href="{% url 'logout' %}" class="btn-shadcn btn-destructive">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- Header Card -->
+        <div class="shadcn-card">
+            <div class="header-banner">
+                <div class="title-meta">
+                    <h2>Add New Product</h2>
+                    <p>Enter product details to add to inventory</p>
+                </div>
+                <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    <span>Back to Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Django Feedback Messages -->
+        {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.75rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);{% else %}background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2);{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Form Card -->
+        <div class="shadcn-card">
+            <form method="POST" action="{% url 'add_product' %}">
+                {% csrf_token %}
+
+                <div class="form-grid">
+                    <!-- Product Name -->
+                    <div class="form-field">
+                        <label class="form-label" for="name">Product Name *</label>
+                        <input type="text" id="name" name="name" value="{{ name|default:'' }}" placeholder="Enter product name" class="form-input">
+                    </div>
+
+                    <!-- Category -->
+                    <div class="form-field">
+                        <label class="form-label" for="category">Category *</label>
+                        <input type="text" id="category" name="category" value="{{ category|default:'' }}" placeholder="Enter product category" class="form-input">
+                    </div>
+
+                    <!-- Price -->
+                    <div class="form-field">
+                        <label class="form-label" for="price">Price *</label>
+                        <input type="number" step="0.01" id="price" name="price" value="{{ price|default:'' }}" placeholder="Enter product price" class="form-input">
+                    </div>
+
+                    <!-- Stock -->
+                    <div class="form-field">
+                        <label class="form-label" for="stock">Stock Quantity *</label>
+                        <input type="number" step="1" id="stock" name="stock" value="{{ stock|default:'' }}" placeholder="Enter available stock" class="form-input">
+                    </div>
+
+                    <!-- GST Rate -->
+                    <div class="form-field">
+                        <label class="form-label" for="gst_rate">GST Rate (%) *</label>
+                        <input type="number" step="0.01" id="gst_rate" name="gst_rate" value="{{ gst_rate|default:'' }}" placeholder="Enter GST rate percentage" class="form-input">
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="action-row">
+                    <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-shadcn btn-primary" style="padding: 0.5rem 1.5rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>Add Product</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="{% static 'assets/js/app.js' %}"></script>
+</body>
+
+</html>
