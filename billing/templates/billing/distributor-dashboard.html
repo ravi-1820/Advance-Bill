@@ -685,26 +685,29 @@
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button class="btn-shadcn btn-primary" style="width: 100%; py: 0.65rem;" onclick="App.toast('Generating Dynamic Invoice QR...')">
+                        <button class="btn-shadcn btn-primary" style="width: 100%; padding: 0.65rem 1rem;" onclick="App.toast('Generating Dynamic Invoice QR...')">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                             <span>Generate Dynamic QR Bill</span>
                         </button>
-                        <a href="{% url 'customer_list' %}" class="btn-shadcn btn-secondary" style="width: 100%;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                            <span>View All Customers</span>
-                        </a>
-                        <a href="{% url 'add_customer' %}" class="btn-shadcn btn-outline" style="width: 100%;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                            <span>Register New Customer</span>
-                        </a>
-                        <a href="{% url 'product_list' %}" class="btn-shadcn btn-secondary" style="width: 100%;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                            <span>View Product Catalog</span>
-                        </a>
-                        <a href="{% url 'add_product' %}" class="btn-shadcn btn-outline" style="width: 100%;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            <span>Add New Product</span>
-                        </a>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <a href="{% url 'customer_list' %}" class="btn-shadcn btn-secondary" style="width: 100%; padding: 0.5rem 0.65rem; font-size: 0.8rem;" title="View Customer Directory">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                <span>Customers</span>
+                            </a>
+                            <a href="{% url 'add_customer' %}" class="btn-shadcn btn-outline" style="width: 100%; padding: 0.5rem 0.65rem; font-size: 0.8rem;" title="Add New Customer">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <span>+ Customer</span>
+                            </a>
+                            <a href="{% url 'product_list' %}" class="btn-shadcn btn-secondary" style="width: 100%; padding: 0.5rem 0.65rem; font-size: 0.8rem;" title="View Product Catalog">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                <span>Products</span>
+                            </a>
+                            <a href="{% url 'add_product' %}" class="btn-shadcn btn-outline" style="width: 100%; padding: 0.5rem 0.65rem; font-size: 0.8rem;" title="Add New Product">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <span>+ Product</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
