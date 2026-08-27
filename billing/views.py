@@ -332,7 +332,7 @@ def add_product(request):
             )
 
             messages.success(request, "Product added successfully.")
-            return redirect('distributor_dashboard')
+            return redirect('product_list')
 
         return render(request, 'billing/add-product.html', {'user': user, 'profile': user})
 
