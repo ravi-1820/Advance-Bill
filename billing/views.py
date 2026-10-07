@@ -586,6 +586,30 @@ def delete_customer(request, id):
         return redirect('customer_list')
 
 
+@csrf_exempt
+def delete_product(request, id):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+        product = Product.objects.get(id=id)
+
+        if request.method == 'POST' or request.method == 'GET':
+            product.delete()
+            messages.success(request, "Product deleted successfully.")
+            return redirect('product_list')
+
+        return redirect('product_list')
+    except (User.DoesNotExist, Product.DoesNotExist):
+        messages.error(request, "Product not found.")
+        return redirect('product_list')
+    except Exception:
+        return redirect('product_list')
+
+
+
 def admin_dashboard(request):
     try:
         user_id = request.session.get('user_id')

@@ -17,6 +17,7 @@ urlpatterns = [
     path('edit-customer/<int:id>/', views.edit_customer, name='edit_customer'),
     path('edit-product/<int:id>/', views.edit_product, name='edit_product'),
     path('delete-customer/<int:id>/', views.delete_customer, name='delete_customer'),
+    path('delete-product/<int:id>/', views.delete_product, name='delete_product'),
     path('distributor-register/', views.distributor_register, name='distributor_register'),
     path('register/', views.distributor_register, name='register'),
     path('forgot-password/generate-otp/', views.generate_forgot_otp, name='generate_forgot_otp'),
