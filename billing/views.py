@@ -466,6 +466,107 @@ def edit_customer(request, id):
         return redirect('customer_list')
 
 
+@csrf_exempt
+def edit_product(request, id):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+        product = Product.objects.get(id=id)
+
+        if request.method == 'POST':
+            name = request.POST.get('name', '').strip()
+            category = request.POST.get('category', '').strip()
+            price_str = request.POST.get('price', '').strip()
+            stock_str = request.POST.get('stock', '').strip()
+            gst_rate_str = request.POST.get('gst_rate', '').strip()
+
+            context = {
+                'user': user,
+                'profile': user,
+                'product': product,
+                'name': name,
+                'category': category,
+                'price': price_str,
+                'stock': stock_str,
+                'gst_rate': gst_rate_str,
+            }
+
+            if not name:
+                messages.error(request, "Please enter product name.")
+                return render(request, 'billing/edit-product.html', context)
+
+            if not category:
+                messages.error(request, "Please enter category.")
+                return render(request, 'billing/edit-product.html', context)
+
+            if not price_str:
+                messages.error(request, "Price must be greater than 0.")
+                return render(request, 'billing/edit-product.html', context)
+
+            try:
+                price = float(price_str)
+                if price <= 0:
+                    messages.error(request, "Price must be greater than 0.")
+                    return render(request, 'billing/edit-product.html', context)
+            except ValueError:
+                messages.error(request, "Price must be greater than 0.")
+                return render(request, 'billing/edit-product.html', context)
+
+            if not stock_str:
+                messages.error(request, "Stock cannot be negative.")
+                return render(request, 'billing/edit-product.html', context)
+
+            try:
+                stock = int(stock_str)
+                if stock < 0:
+                    messages.error(request, "Stock cannot be negative.")
+                    return render(request, 'billing/edit-product.html', context)
+            except ValueError:
+                messages.error(request, "Stock cannot be negative.")
+                return render(request, 'billing/edit-product.html', context)
+
+            gst_rate = 0.0
+            if gst_rate_str:
+                try:
+                    gst_rate = float(gst_rate_str)
+                    if gst_rate < 0:
+                        messages.error(request, "GST rate cannot be negative.")
+                        return render(request, 'billing/edit-product.html', context)
+                except ValueError:
+                    messages.error(request, "Please enter a valid GST rate.")
+                    return render(request, 'billing/edit-product.html', context)
+
+            product.name = name
+            product.category = category
+            product.price = price
+            product.stock = stock
+            product.gst_rate = gst_rate
+            product.save()
+
+            messages.success(request, "Product updated successfully.")
+            return redirect('product_list')
+
+        return render(request, 'billing/edit-product.html', {
+            'user': user,
+            'profile': user,
+            'product': product,
+            'name': product.name,
+            'category': product.category,
+            'price': product.price,
+            'stock': product.stock,
+            'gst_rate': product.gst_rate,
+        })
+    except (User.DoesNotExist, Product.DoesNotExist):
+        messages.error(request, "Product not found.")
+        return redirect('product_list')
+    except Exception:
+        return redirect('product_list')
+
+
+
 def delete_customer(request, id):
     try:
         user_id = request.session.get('user_id')
