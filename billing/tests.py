@@ -201,3 +201,54 @@ class InvoiceCreationViewTest(TestCase):
         invoice_item = InvoiceItem.objects.filter(invoice=invoice).first()
         self.assertIsNotNone(invoice_item)
         self.assertEqual(float(invoice_item.total_price), 2124.00)
+
+    def test_view_post_creates_invoice_with_multiple_product_rows(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        # Product A: Price = 1000, Qty = 2, GST = 18%, Discount = 10% -> 2124.00
+        # Product B: Price = 500, Qty = 3, GST = 5%, Discount = 0% -> 1575.00
+        product_b = Product.objects.create(
+            name="USB-C Cable",
+            category="Accessories",
+            price=500.00,
+            stock=50,
+            gst_rate=5.00
+        )
+
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': [self.product_item.id, product_b.id],
+            'quantity': [2, 3],
+            'gst': [18, 5],
+            'discount': [10, 0]
+        })
+        self.assertEqual(response.status_code, 302)
+
+        # 1. Exactly one Invoice created for customer
+        invoices = Invoice.objects.filter(customer=self.customer).order_by('-id')
+        invoice = invoices.first()
+        self.assertIsNotNone(invoice)
+
+        # 2. Overall invoice total = 2124.00 + 1575.00 = 3699.00
+        self.assertEqual(float(invoice.total_amount), 3699.00)
+
+        # 3. Two InvoiceItem records created under the same Invoice
+        items = InvoiceItem.objects.filter(invoice=invoice).order_by('id')
+        self.assertEqual(items.count(), 2)
+
+        # Verify Item 1
+        item1 = items[0]
+        self.assertEqual(item1.product, self.product_item)
+        self.assertEqual(item1.quantity, 2)
+        self.assertEqual(float(item1.unit_price), 1000.00)
+        self.assertEqual(float(item1.total_price), 2124.00)
+
+        # Verify Item 2
+        item2 = items[1]
+        self.assertEqual(item2.product, product_b)
+        self.assertEqual(item2.quantity, 3)
+        self.assertEqual(float(item2.unit_price), 500.00)
+        self.assertEqual(float(item2.total_price), 1575.00)

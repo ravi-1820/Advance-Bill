@@ -171,16 +171,20 @@
             color: #f87171;
             border-color: rgba(239, 68, 68, 0.2);
         }
-        .btn-destructive:hover {
+        .btn-destructive:hover:not(:disabled) {
             background: rgba(239, 68, 68, 0.2);
             border-color: rgba(239, 68, 68, 0.4);
             transform: translateY(-1px);
+        }
+        .btn-destructive:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         /* Main Container */
         .main-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 1.75rem 1.5rem 3rem 1.5rem;
             display: flex;
@@ -217,43 +221,25 @@
             color: var(--text-muted);
         }
 
-        /* Form Grid */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-        }
-
-        .form-field {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .form-field-full {
-            grid-column: 1 / -1;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
         .form-label {
             font-size: 0.78rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
         }
 
         .form-input {
             width: 100%;
-            height: 42px;
+            height: 40px;
             background: var(--card-elevated);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 0 12px;
+            padding: 0 10px;
             color: var(--text-primary);
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             outline: none;
             transition: all 0.15s ease;
         }
@@ -282,7 +268,78 @@
             margin-top: 2px;
         }
 
-        /* Live Calculation Box */
+        /* Products Table Section */
+        .items-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .items-section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .product-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-elevated);
+        }
+
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 780px;
+        }
+
+        .product-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: rgba(24, 24, 27, 0.8);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .product-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .product-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .product-table tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .row-total-cell {
+            font-weight: 700;
+            font-family: monospace;
+            color: var(--text-primary);
+            white-space: nowrap;
+            text-align: right;
+            padding-right: 14px;
+        }
+
+        /* Calculation Summary Box */
         .calc-summary-card {
             margin-top: 1.5rem;
             background: var(--card-elevated);
@@ -370,7 +427,7 @@
                 </div>
                 <div class="brand-titles">
                     <h1>Advance Billing</h1>
-                    <span>Create New Invoice</span>
+                    <span>Dynamic Invoice Generator</span>
                 </div>
             </a>
 
@@ -409,7 +466,7 @@
             <div class="header-banner">
                 <div class="title-meta">
                     <h2>Create Invoice</h2>
-                    <p>Dynamic billing with real-time product price, quantity, GST & discount calculation</p>
+                    <p>Dynamic multi-product billing with real-time row totals & live invoice settlement</p>
                 </div>
                 <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -434,7 +491,7 @@
 
         <!-- Form Card -->
         <div class="shadcn-card">
-            <form method="POST" action="{% url 'create_invoice' %}" novalidate>
+            <form id="invoice-creation-form" method="POST" action="{% url 'create_invoice' %}" novalidate>
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -445,93 +502,118 @@
                 </div>
                 {% endif %}
 
-                <div class="form-grid">
-                    <!-- Customer Dropdown -->
-                    <div class="form-field-full">
-                        <label class="form-label" for="customer-select">Customer *</label>
-                        {{ form.customer }}
-                        {% if form.customer.errors %}
-                            <div class="field-error">
-                                {% for error in form.customer.errors %}{{ error }}{% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Product Dropdown -->
-                    <div class="form-field">
-                        <label class="form-label" for="product-select">Product *</label>
-                        {{ form.product }}
-                        {% if form.product.errors %}
-                            <div class="field-error">
-                                {% for error in form.product.errors %}{{ error }}{% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Unit Price Display (Read-Only) -->
-                    <div class="form-field">
-                        <label class="form-label" for="price-display">Unit Price (₹)</label>
-                        <input type="text" id="price-display" class="form-input" placeholder="₹ 0.00" readonly>
-                    </div>
-
-                    <!-- Quantity Input -->
-                    <div class="form-field">
-                        <label class="form-label" for="quantity-input">Quantity *</label>
-                        {{ form.quantity }}
-                        {% if form.quantity.errors %}
-                            <div class="field-error">
-                                {% for error in form.quantity.errors %}{{ error }}{% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- GST Input -->
-                    <div class="form-field">
-                        <label class="form-label" for="gst-input">GST (%)</label>
-                        {{ form.gst }}
-                        {% if form.gst.errors %}
-                            <div class="field-error">
-                                {% for error in form.gst.errors %}{{ error }}{% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Discount Input -->
-                    <div class="form-field">
-                        <label class="form-label" for="discount-input">Discount (%)</label>
-                        {{ form.discount }}
-                        {% if form.discount.errors %}
-                            <div class="field-error">
-                                {% for error in form.discount.errors %}{{ error }}{% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
+                <!-- Customer Selection -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="form-label" for="customer-select">Customer *</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div class="field-error">
+                            {% for error in form.customer.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
 
-                <!-- Live Dynamic Item Total Calculation Card -->
+                <!-- Products Table Section Header -->
+                <div class="items-section-header">
+                    <div class="items-section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        <span>Invoice Products & Line Items</span>
+                    </div>
+                    <button type="button" id="btn-add-product" class="btn-shadcn btn-secondary" onclick="addProductRow()">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>+ Add Product</span>
+                    </button>
+                </div>
+
+                <!-- Dynamic Multiple Products Table -->
+                <div class="product-table-wrapper">
+                    <table class="product-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 32%;">Product</th>
+                                <th style="width: 14%;">Unit Price</th>
+                                <th style="width: 10%;">Qty</th>
+                                <th style="width: 11%;">GST (%)</th>
+                                <th style="width: 11%;">Discount (%)</th>
+                                <th style="width: 14%; text-align: right; padding-right: 14px;">Item Total</th>
+                                <th style="width: 8%; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-rows-body">
+                            <!-- Initial Row 1 -->
+                            <tr class="product-row" data-row-index="0">
+                                <td>
+                                    <select name="product" class="form-input form-select row-product" required>
+                                        <option value="">Select Product</option>
+                                        {% for prod in products %}
+                                            <option value="{{ prod.id }}">{{ prod.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-input row-price" placeholder="₹ 0.00" readonly>
+                                </td>
+                                <td>
+                                    <input type="number" name="quantity" class="form-input row-quantity" min="1" value="1" required>
+                                </td>
+                                <td>
+                                    <input type="number" name="gst" class="form-input row-gst" min="0" max="100" step="0.01" value="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="discount" class="form-input row-discount" min="0" max="100" step="0.01" value="0">
+                                </td>
+                                <td class="row-total-cell">
+                                    <span class="row-total">₹ 0.00</span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="btn-shadcn btn-destructive btn-remove-row" style="padding: 0.35rem 0.65rem; font-size: 0.78rem;" title="Remove this row">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add Product Quick Button below table -->
+                <div style="margin-top: 0.75rem; display: flex; justify-content: flex-start;">
+                    <button type="button" class="btn-shadcn btn-secondary" onclick="addProductRow()" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Add Another Product</span>
+                    </button>
+                </div>
+
+                <!-- Live Dynamic Overall Invoice Calculation Summary Card -->
                 <div class="calc-summary-card">
                     <div class="calc-summary-header">
-                        <span>Dynamic Calculation Summary</span>
-                        <span style="font-size: 0.72rem; color: var(--dist-primary); text-transform: none;">Live Real-Time Sync</span>
+                        <span>Overall Invoice Settlement Summary</span>
+                        <span id="calc-items-count" style="font-size: 0.75rem; color: var(--dist-primary); text-transform: none; font-weight: 600;">1 Item Selected</span>
                     </div>
                     <div class="calc-row">
-                        <span>Base Subtotal (Price &times; Quantity):</span>
+                        <span>Gross Subtotal (All Products &times; Quantities):</span>
                         <span id="calc-subtotal">₹ 0.00</span>
                     </div>
                     <div class="calc-row">
-                        <span>Discount Applied:</span>
+                        <span>Total Discounts Applied:</span>
                         <span id="calc-discount" style="color: #f87171;">- ₹ 0.00</span>
                     </div>
                     <div class="calc-row">
-                        <span>Taxable Value:</span>
+                        <span>Net Taxable Value:</span>
                         <span id="calc-taxable">₹ 0.00</span>
                     </div>
                     <div class="calc-row">
-                        <span>GST Amount:</span>
+                        <span>Total GST Levied:</span>
                         <span id="calc-gst" style="color: #4ade80;">+ ₹ 0.00</span>
                     </div>
                     <div class="calc-total-row">
-                        <span>Final Item Total:</span>
+                        <span>Overall Invoice Total:</span>
                         <span id="calc-item-total">₹ 0.00</span>
                     </div>
                 </div>
@@ -559,12 +641,12 @@
     <script src="{% static 'assets/js/app.js' %}"></script>
     <script>
         /**
-         * Dynamic Item Total Calculation Script for Invoice Creation
+         * Dynamic Multiple Product Rows & Real-Time Invoice Total Calculation
          */
         (function () {
             let productCatalog = {};
 
-            // Safely parse dynamic product data from Django backend
+            // Safely parse dynamic product catalog data from Django backend
             try {
                 const dataScript = document.getElementById('product-catalog-data');
                 if (dataScript && dataScript.textContent) {
@@ -574,7 +656,6 @@
                 console.error("Error parsing product catalog data:", e);
             }
 
-            // Expose globally for testing/inspection
             window.PRODUCT_DATA = productCatalog;
 
             // Currency formatting helper using standard Indian numbering system
@@ -589,37 +670,35 @@
                 });
             }
 
-            function calculateItemTotal() {
-                const productSelect = document.getElementById('product-select');
-                const quantityInput = document.getElementById('quantity-input');
-                const gstInput = document.getElementById('gst-input');
-                const discountInput = document.getElementById('discount-input');
-                const priceDisplay = document.getElementById('price-display');
+            /**
+             * Calculate individual product row total
+             */
+            function calculateRow(row) {
+                const select = row.querySelector('.row-product');
+                const priceInput = row.querySelector('.row-price');
+                const qtyInput = row.querySelector('.row-quantity');
+                const gstInput = row.querySelector('.row-gst');
+                const discInput = row.querySelector('.row-discount');
+                const totalSpan = row.querySelector('.row-total');
 
-                if (!productSelect) return;
-
-                const selectedId = String(productSelect.value);
+                const selectedId = select ? String(select.value) : '';
                 let unitPrice = 0;
 
                 if (selectedId && productCatalog[selectedId]) {
                     unitPrice = parseFloat(productCatalog[selectedId].price) || 0;
                 }
 
-                // Update unit price display
-                if (priceDisplay) {
-                    priceDisplay.value = unitPrice > 0 ? formatCurrency(unitPrice) : '₹ 0.00';
+                if (priceInput) {
+                    priceInput.value = unitPrice > 0 ? formatCurrency(unitPrice) : '₹ 0.00';
                 }
 
-                // Parse quantity with safe numeric fallback (must be >= 0)
-                const qtyVal = parseFloat(quantityInput ? quantityInput.value : 0);
+                const qtyVal = parseFloat(qtyInput ? qtyInput.value : 0);
                 const quantity = (!isNaN(qtyVal) && qtyVal > 0) ? qtyVal : 0;
 
-                // Parse GST % with safe fallback
                 const gstVal = parseFloat(gstInput ? gstInput.value : 0);
                 const gstRate = (!isNaN(gstVal) && gstVal >= 0) ? gstVal : 0;
 
-                // Parse Discount % with safe fallback
-                const discVal = parseFloat(discountInput ? discountInput.value : 0);
+                const discVal = parseFloat(discInput ? discInput.value : 0);
                 const discountRate = (!isNaN(discVal) && discVal >= 0) ? discVal : 0;
 
                 // 1. Base Subtotal = Unit Price * Quantity
@@ -634,65 +713,178 @@
                 // 4. GST Amount = Taxable Value * (GST Rate / 100)
                 const gstAmount = taxableValue * (gstRate / 100);
 
-                // 5. Final Item Total = Taxable Value + GST Amount
-                const itemTotal = taxableValue + gstAmount;
+                // 5. Final Row Total = Taxable Value + GST Amount
+                const rowTotal = taxableValue + gstAmount;
 
-                // Update summary elements in the UI
+                if (totalSpan) {
+                    totalSpan.textContent = formatCurrency(rowTotal);
+                }
+
+                return {
+                    subtotal: subtotal,
+                    discount: discountAmount,
+                    taxable: taxableValue,
+                    gst: gstAmount,
+                    total: rowTotal
+                };
+            }
+
+            /**
+             * Calculate overall invoice totals by summing all product rows
+             */
+            function calculateInvoiceTotal() {
+                const rows = document.querySelectorAll('#product-rows-body .product-row');
+                let grandSubtotal = 0;
+                let grandDiscount = 0;
+                let grandTaxable = 0;
+                let grandGst = 0;
+                let grandTotal = 0;
+
+                rows.forEach(function (row) {
+                    const res = calculateRow(row);
+                    grandSubtotal += res.subtotal;
+                    grandDiscount += res.discount;
+                    grandTaxable += res.taxable;
+                    grandGst += res.gst;
+                    grandTotal += res.total;
+                });
+
+                // Update summary breakdown
+                const itemsCountEl = document.getElementById('calc-items-count');
                 const subtotalEl = document.getElementById('calc-subtotal');
                 const discountEl = document.getElementById('calc-discount');
                 const taxableEl = document.getElementById('calc-taxable');
                 const gstEl = document.getElementById('calc-gst');
-                const itemTotalEl = document.getElementById('calc-item-total');
+                const grandTotalEl = document.getElementById('calc-item-total');
 
-                if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
-                if (discountEl) discountEl.textContent = '- ' + formatCurrency(discountAmount);
-                if (taxableEl) taxableEl.textContent = formatCurrency(taxableValue);
-                if (gstEl) gstEl.textContent = '+ ' + formatCurrency(gstAmount);
-                if (itemTotalEl) itemTotalEl.textContent = formatCurrency(itemTotal);
+                if (itemsCountEl) {
+                    itemsCountEl.textContent = `${rows.length} Item${rows.length === 1 ? '' : 's'} Selected`;
+                }
+                if (subtotalEl) subtotalEl.textContent = formatCurrency(grandSubtotal);
+                if (discountEl) discountEl.textContent = '- ' + formatCurrency(grandDiscount);
+                if (taxableEl) taxableEl.textContent = formatCurrency(grandTaxable);
+                if (gstEl) gstEl.textContent = '+ ' + formatCurrency(grandGst);
+                if (grandTotalEl) grandTotalEl.textContent = formatCurrency(grandTotal);
+
+                // Update remove buttons state
+                updateRemoveButtons();
             }
 
-            // Hook event listeners
-            document.addEventListener('DOMContentLoaded', function () {
-                const productSelect = document.getElementById('product-select');
-                const quantityInput = document.getElementById('quantity-input');
-                const gstInput = document.getElementById('gst-input');
-                const discountInput = document.getElementById('discount-input');
+            /**
+             * Minimum Row Protection: disable or style remove button when only 1 row remains
+             */
+            function updateRemoveButtons() {
+                const rows = document.querySelectorAll('#product-rows-body .product-row');
+                const removeBtns = document.querySelectorAll('.btn-remove-row');
+                removeBtns.forEach(function (btn) {
+                    btn.disabled = (rows.length <= 1);
+                });
+            }
 
-                if (productSelect) {
-                    productSelect.addEventListener('change', function () {
-                        const selectedId = String(this.value);
-                        // Auto-populate default GST rate if present in product data and GST input is empty/0
-                        if (selectedId && productCatalog[selectedId] && gstInput) {
+            /**
+             * Add a new product row dynamically without page refresh
+             */
+            window.addProductRow = function () {
+                const tbody = document.getElementById('product-rows-body');
+                if (!tbody) return;
+
+                const firstRow = tbody.querySelector('.product-row');
+                let newRow;
+
+                if (firstRow) {
+                    // Clone structure from first row
+                    newRow = firstRow.cloneNode(true);
+                    // Reset inputs to clean defaults
+                    const select = newRow.querySelector('.row-product');
+                    const price = newRow.querySelector('.row-price');
+                    const qty = newRow.querySelector('.row-quantity');
+                    const gst = newRow.querySelector('.row-gst');
+                    const disc = newRow.querySelector('.row-discount');
+                    const total = newRow.querySelector('.row-total');
+
+                    if (select) select.selectedIndex = 0;
+                    if (price) price.value = '₹ 0.00';
+                    if (qty) qty.value = '1';
+                    if (gst) gst.value = '0';
+                    if (disc) disc.value = '0';
+                    if (total) total.textContent = '₹ 0.00';
+                } else {
+                    return;
+                }
+
+                tbody.appendChild(newRow);
+                calculateInvoiceTotal();
+            };
+
+            /**
+             * Remove a specific product row without page refresh
+             */
+            window.removeProductRow = function (btn) {
+                const tbody = document.getElementById('product-rows-body');
+                const rows = tbody.querySelectorAll('.product-row');
+
+                if (rows.length <= 1) {
+                    if (typeof App !== 'undefined' && App.toast) {
+                        App.toast('At least one product row is required in the invoice.');
+                    } else {
+                        alert('At least one product row is required in the invoice.');
+                    }
+                    return;
+                }
+
+                const row = btn.closest('.product-row');
+                if (row) {
+                    row.remove();
+                    calculateInvoiceTotal();
+                }
+            };
+
+            // Event Delegation on the table body for all rows
+            document.addEventListener('DOMContentLoaded', function () {
+                const tbody = document.getElementById('product-rows-body');
+                if (!tbody) return;
+
+                // Handle product change
+                tbody.addEventListener('change', function (e) {
+                    if (e.target && e.target.classList.contains('row-product')) {
+                        const row = e.target.closest('.product-row');
+                        const selectedId = String(e.target.value);
+                        if (row && selectedId && productCatalog[selectedId]) {
                             const defaultGst = parseFloat(productCatalog[selectedId].gst_rate);
-                            if (!isNaN(defaultGst) && defaultGst > 0 && (!gstInput.value || parseFloat(gstInput.value) === 0)) {
+                            const gstInput = row.querySelector('.row-gst');
+                            if (gstInput && !isNaN(defaultGst) && defaultGst > 0 && (!gstInput.value || parseFloat(gstInput.value) === 0)) {
                                 gstInput.value = defaultGst;
                             }
                         }
-                        calculateItemTotal();
-                    });
-                }
+                        calculateInvoiceTotal();
+                    } else if (e.target && (e.target.classList.contains('row-quantity') || e.target.classList.contains('row-gst') || e.target.classList.contains('row-discount'))) {
+                        calculateInvoiceTotal();
+                    }
+                });
 
-                if (quantityInput) {
-                    quantityInput.addEventListener('input', calculateItemTotal);
-                    quantityInput.addEventListener('change', calculateItemTotal);
-                }
+                // Handle input modifications (live keystroke updates)
+                tbody.addEventListener('input', function (e) {
+                    if (e.target && (e.target.classList.contains('row-quantity') || e.target.classList.contains('row-gst') || e.target.classList.contains('row-discount'))) {
+                        calculateInvoiceTotal();
+                    }
+                });
 
-                if (gstInput) {
-                    gstInput.addEventListener('input', calculateItemTotal);
-                    gstInput.addEventListener('change', calculateItemTotal);
-                }
+                // Handle remove button clicks via delegation
+                tbody.addEventListener('click', function (e) {
+                    const removeBtn = e.target.closest('.btn-remove-row');
+                    if (removeBtn) {
+                        e.preventDefault();
+                        window.removeProductRow(removeBtn);
+                    }
+                });
 
-                if (discountInput) {
-                    discountInput.addEventListener('input', calculateItemTotal);
-                    discountInput.addEventListener('change', calculateItemTotal);
-                }
-
-                // Initial calculation on page load
-                calculateItemTotal();
+                // Initial calculation on load
+                calculateInvoiceTotal();
             });
 
-            // Expose calculateItemTotal function for testing
-            window.calculateItemTotal = calculateItemTotal;
+            // Expose globally for testing/inspection
+            window.calculateInvoiceTotal = calculateInvoiceTotal;
+            window.calculateRow = calculateRow;
         })();
     </script>
 </body>

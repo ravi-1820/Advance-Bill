@@ -800,7 +800,7 @@ def create_invoice(request):
             return redirect('distributor_login')
 
         user = User.objects.get(id=user_id, usertype='distributor')
-        products_qs = Product.objects.all()
+        products_qs = Product.objects.all().order_by('name')
         product_data = {
             str(p.id): {
                 'name': p.name,
@@ -811,46 +811,108 @@ def create_invoice(request):
 
         if request.method == 'POST':
             form = InvoiceCreationForm(request.POST)
-            if form.is_valid():
-                customer = form.cleaned_data['customer']
-                product = form.cleaned_data['product']
-                quantity = form.cleaned_data['quantity']
-                gst_rate = float(form.cleaned_data.get('gst') or 0.0)
-                discount_rate = float(form.cleaned_data.get('discount') or 0.0)
 
-                unit_price = float(product.price)
-                subtotal = unit_price * quantity
-                discount_amount = subtotal * (discount_rate / 100.0)
-                taxable_value = subtotal - discount_amount
-                gst_amount = taxable_value * (gst_rate / 100.0)
-                final_total = taxable_value + gst_amount
+            # Validate Customer
+            customer = None
+            customer_id = request.POST.get('customer')
+            if customer_id:
+                try:
+                    customer = Customer.objects.get(id=customer_id)
+                except (Customer.DoesNotExist, ValueError):
+                    pass
 
-                invoice_num = f"INV-{int(time.time())}-{random.randint(100, 999)}"
-
-                invoice = Invoice.objects.create(
-                    customer=customer,
-                    invoice_number=invoice_num,
-                    total_amount=round(final_total, 2)
-                )
-
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    product=product,
-                    quantity=quantity,
-                    unit_price=unit_price,
-                    total_price=round(final_total, 2)
-                )
-
-                messages.success(request, f"Invoice #{invoice.invoice_number} created successfully for {customer.name}!")
-                return redirect('create_invoice')
-            else:
-                messages.error(request, "Please correct the errors below.")
+            if not customer:
+                messages.error(request, "Please select a valid customer.")
                 return render(request, 'billing/create-invoice.html', {
                     'user': user,
                     'profile': user,
                     'form': form,
+                    'products': products_qs,
                     'product_data': product_data
                 })
+
+            # Retrieve dynamic product rows
+            product_ids = request.POST.getlist('product')
+            quantities = request.POST.getlist('quantity')
+            gst_rates = request.POST.getlist('gst')
+            discount_rates = request.POST.getlist('discount')
+
+            row_items = []
+            overall_total = 0.0
+
+            for i in range(len(product_ids)):
+                pid = product_ids[i]
+                if not pid:
+                    continue
+                try:
+                    product_obj = Product.objects.get(id=pid)
+                except (Product.DoesNotExist, ValueError):
+                    continue
+
+                try:
+                    qty = int(quantities[i]) if i < len(quantities) and quantities[i] else 1
+                    if qty < 1:
+                        qty = 1
+                except ValueError:
+                    qty = 1
+
+                try:
+                    gst = float(gst_rates[i]) if i < len(gst_rates) and gst_rates[i] else 0.0
+                    if gst < 0:
+                        gst = 0.0
+                except ValueError:
+                    gst = 0.0
+
+                try:
+                    disc = float(discount_rates[i]) if i < len(discount_rates) and discount_rates[i] else 0.0
+                    if disc < 0:
+                        disc = 0.0
+                except ValueError:
+                    disc = 0.0
+
+                unit_price = float(product_obj.price)
+                subtotal = unit_price * qty
+                discount_amount = subtotal * (disc / 100.0)
+                taxable_value = max(0.0, subtotal - discount_amount)
+                gst_amount = taxable_value * (gst / 100.0)
+                row_total = taxable_value + gst_amount
+
+                overall_total += row_total
+                row_items.append({
+                    'product': product_obj,
+                    'quantity': qty,
+                    'unit_price': unit_price,
+                    'total_price': round(row_total, 2)
+                })
+
+            if not row_items:
+                messages.error(request, "Please select at least one valid product.")
+                return render(request, 'billing/create-invoice.html', {
+                    'user': user,
+                    'profile': user,
+                    'form': form,
+                    'products': products_qs,
+                    'product_data': product_data
+                })
+
+            invoice_num = f"INV-{int(time.time())}-{random.randint(100, 999)}"
+            invoice = Invoice.objects.create(
+                customer=customer,
+                invoice_number=invoice_num,
+                total_amount=round(overall_total, 2)
+            )
+
+            for item in row_items:
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    product=item['product'],
+                    quantity=item['quantity'],
+                    unit_price=item['unit_price'],
+                    total_price=item['total_price']
+                )
+
+            messages.success(request, f"Invoice #{invoice.invoice_number} created successfully with {len(row_items)} item(s) for {customer.name}!")
+            return redirect('create_invoice')
         else:
             form = InvoiceCreationForm()
 
@@ -858,6 +920,7 @@ def create_invoice(request):
             'user': user,
             'profile': user,
             'form': form,
+            'products': products_qs,
             'product_data': product_data
         })
     except User.DoesNotExist:
