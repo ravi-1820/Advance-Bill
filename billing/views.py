@@ -8,7 +8,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from django.core.paginator import Paginator
-from billing.models import User, OTP, Customer, Product
+from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
+from billing.forms import InvoiceCreationForm
 
 
 def index(request):
@@ -789,3 +790,79 @@ def verify_reset_password(request):
             return JsonResponse({'status': 'error', 'message': 'Something went wrong.'}, status=400)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid method.'}, status=405)
+
+
+@csrf_exempt
+def create_invoice(request):
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+        products_qs = Product.objects.all()
+        product_data = {
+            str(p.id): {
+                'name': p.name,
+                'price': float(p.price),
+                'gst_rate': float(p.gst_rate)
+            } for p in products_qs
+        }
+
+        if request.method == 'POST':
+            form = InvoiceCreationForm(request.POST)
+            if form.is_valid():
+                customer = form.cleaned_data['customer']
+                product = form.cleaned_data['product']
+                quantity = form.cleaned_data['quantity']
+                gst_rate = float(form.cleaned_data.get('gst') or 0.0)
+                discount_rate = float(form.cleaned_data.get('discount') or 0.0)
+
+                unit_price = float(product.price)
+                subtotal = unit_price * quantity
+                discount_amount = subtotal * (discount_rate / 100.0)
+                taxable_value = subtotal - discount_amount
+                gst_amount = taxable_value * (gst_rate / 100.0)
+                final_total = taxable_value + gst_amount
+
+                invoice_num = f"INV-{int(time.time())}-{random.randint(100, 999)}"
+
+                invoice = Invoice.objects.create(
+                    customer=customer,
+                    invoice_number=invoice_num,
+                    total_amount=round(final_total, 2)
+                )
+
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    product=product,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    total_price=round(final_total, 2)
+                )
+
+                messages.success(request, f"Invoice #{invoice.invoice_number} created successfully for {customer.name}!")
+                return redirect('create_invoice')
+            else:
+                messages.error(request, "Please correct the errors below.")
+                return render(request, 'billing/create-invoice.html', {
+                    'user': user,
+                    'profile': user,
+                    'form': form,
+                    'product_data': product_data
+                })
+        else:
+            form = InvoiceCreationForm()
+
+        return render(request, 'billing/create-invoice.html', {
+            'user': user,
+            'profile': user,
+            'form': form,
+            'product_data': product_data
+        })
+    except User.DoesNotExist:
+        messages.error(request, "Access restricted to Distributors only..!")
+        return redirect('distributor_login')
+    except Exception as e:
+        messages.error(request, f"An unexpected error occurred: {str(e)}")
+        return redirect('distributor_dashboard')

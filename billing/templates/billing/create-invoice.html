@@ -1,0 +1,700 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Invoice | Advance Billing System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
+    <style>
+        :root {
+            --bg-main: #09090b;
+            --card-bg: #121215;
+            --card-elevated: #18181b;
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --text-primary: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --dist-primary: #3b82f6;
+            --dist-accent: #0ea5e9;
+            --dist-glow: rgba(59, 130, 246, 0.15);
+            --badge-bg: #18181b;
+            --badge-text: #a1a1aa;
+        }
+
+        body.theme-light {
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --card-elevated: #f1f5f9;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            --dist-primary: #2563eb;
+            --dist-accent: #0284c7;
+            --dist-glow: rgba(37, 99, 235, 0.1);
+            --badge-bg: #f1f5f9;
+            --badge-text: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Top Navigation Header */
+        .top-navbar {
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0.85rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--dist-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--dist-glow);
+        }
+
+        .brand-titles h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .brand-titles span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Shadcn Buttons */
+        .btn-shadcn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--dist-primary);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--card-elevated);
+            border-color: var(--border-hover);
+        }
+
+        .btn-destructive {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        .btn-destructive:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Main Container */
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.75rem 1.5rem 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .shadcn-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .title-meta h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .title-meta p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-field-full {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            width: 100%;
+            height: 42px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 12px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--dist-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-input[readonly] {
+            background: rgba(39, 39, 42, 0.4);
+            cursor: not-allowed;
+            color: var(--dist-primary);
+            font-weight: 600;
+        }
+
+        select.form-input option {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            padding: 8px;
+        }
+
+        .field-error {
+            color: #f87171;
+            font-size: 0.78rem;
+            margin-top: 2px;
+        }
+
+        /* Live Calculation Box */
+        .calc-summary-card {
+            margin-top: 1.5rem;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .calc-summary-header {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .calc-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .calc-row span:last-child {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: monospace;
+        }
+
+        .calc-total-row {
+            margin-top: 0.25rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .calc-total-row span:first-child {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .calc-total-row span:last-child {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--dist-primary);
+            font-family: monospace;
+            letter-spacing: -0.02em;
+        }
+
+        .action-row {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body class="theme-distributor">
+
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+        <div class="nav-inner">
+            <a href="{% url 'distributor_dashboard' %}" class="brand-container">
+                <div class="brand-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                </div>
+                <div class="brand-titles">
+                    <h1>Advance Billing</h1>
+                    <span>Create New Invoice</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <button type="button" id="theme-toggle-btn" class="btn-shadcn btn-outline" onclick="App.toggleTheme()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <a href="{% url 'distributor_profile' %}" class="btn-shadcn btn-outline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>Profile</span>
+                </a>
+                <a href="{% url 'logout' %}" class="btn-shadcn btn-destructive">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- Header Card -->
+        <div class="shadcn-card">
+            <div class="header-banner">
+                <div class="title-meta">
+                    <h2>Create Invoice</h2>
+                    <p>Dynamic billing with real-time product price, quantity, GST & discount calculation</p>
+                </div>
+                <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    <span>Back to Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Django Feedback Messages -->
+        {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.75rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);{% else %}background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2);{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Form Card -->
+        <div class="shadcn-card">
+            <form method="POST" action="{% url 'create_invoice' %}" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 1rem; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="form-grid">
+                    <!-- Customer Dropdown -->
+                    <div class="form-field-full">
+                        <label class="form-label" for="customer-select">Customer *</label>
+                        {{ form.customer }}
+                        {% if form.customer.errors %}
+                            <div class="field-error">
+                                {% for error in form.customer.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Dropdown -->
+                    <div class="form-field">
+                        <label class="form-label" for="product-select">Product *</label>
+                        {{ form.product }}
+                        {% if form.product.errors %}
+                            <div class="field-error">
+                                {% for error in form.product.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Unit Price Display (Read-Only) -->
+                    <div class="form-field">
+                        <label class="form-label" for="price-display">Unit Price (₹)</label>
+                        <input type="text" id="price-display" class="form-input" placeholder="₹ 0.00" readonly>
+                    </div>
+
+                    <!-- Quantity Input -->
+                    <div class="form-field">
+                        <label class="form-label" for="quantity-input">Quantity *</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                            <div class="field-error">
+                                {% for error in form.quantity.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- GST Input -->
+                    <div class="form-field">
+                        <label class="form-label" for="gst-input">GST (%)</label>
+                        {{ form.gst }}
+                        {% if form.gst.errors %}
+                            <div class="field-error">
+                                {% for error in form.gst.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Discount Input -->
+                    <div class="form-field">
+                        <label class="form-label" for="discount-input">Discount (%)</label>
+                        {{ form.discount }}
+                        {% if form.discount.errors %}
+                            <div class="field-error">
+                                {% for error in form.discount.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Live Dynamic Item Total Calculation Card -->
+                <div class="calc-summary-card">
+                    <div class="calc-summary-header">
+                        <span>Dynamic Calculation Summary</span>
+                        <span style="font-size: 0.72rem; color: var(--dist-primary); text-transform: none;">Live Real-Time Sync</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>Base Subtotal (Price &times; Quantity):</span>
+                        <span id="calc-subtotal">₹ 0.00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>Discount Applied:</span>
+                        <span id="calc-discount" style="color: #f87171;">- ₹ 0.00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>Taxable Value:</span>
+                        <span id="calc-taxable">₹ 0.00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>GST Amount:</span>
+                        <span id="calc-gst" style="color: #4ade80;">+ ₹ 0.00</span>
+                    </div>
+                    <div class="calc-total-row">
+                        <span>Final Item Total:</span>
+                        <span id="calc-item-total">₹ 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="action-row">
+                    <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-shadcn btn-primary" style="padding: 0.5rem 1.5rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Create Invoice</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Safe Django Database-Driven JSON script for Products -->
+    {{ product_data|json_script:"product-catalog-data" }}
+
+    <script src="{% static 'assets/js/app.js' %}"></script>
+    <script>
+        /**
+         * Dynamic Item Total Calculation Script for Invoice Creation
+         */
+        (function () {
+            let productCatalog = {};
+
+            // Safely parse dynamic product data from Django backend
+            try {
+                const dataScript = document.getElementById('product-catalog-data');
+                if (dataScript && dataScript.textContent) {
+                    productCatalog = JSON.parse(dataScript.textContent);
+                }
+            } catch (e) {
+                console.error("Error parsing product catalog data:", e);
+            }
+
+            // Expose globally for testing/inspection
+            window.PRODUCT_DATA = productCatalog;
+
+            // Currency formatting helper using standard Indian numbering system
+            function formatCurrency(val) {
+                const num = Number(val);
+                if (isNaN(num) || num === null || !isFinite(num)) {
+                    return '₹ 0.00';
+                }
+                return '₹ ' + num.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            function calculateItemTotal() {
+                const productSelect = document.getElementById('product-select');
+                const quantityInput = document.getElementById('quantity-input');
+                const gstInput = document.getElementById('gst-input');
+                const discountInput = document.getElementById('discount-input');
+                const priceDisplay = document.getElementById('price-display');
+
+                if (!productSelect) return;
+
+                const selectedId = String(productSelect.value);
+                let unitPrice = 0;
+
+                if (selectedId && productCatalog[selectedId]) {
+                    unitPrice = parseFloat(productCatalog[selectedId].price) || 0;
+                }
+
+                // Update unit price display
+                if (priceDisplay) {
+                    priceDisplay.value = unitPrice > 0 ? formatCurrency(unitPrice) : '₹ 0.00';
+                }
+
+                // Parse quantity with safe numeric fallback (must be >= 0)
+                const qtyVal = parseFloat(quantityInput ? quantityInput.value : 0);
+                const quantity = (!isNaN(qtyVal) && qtyVal > 0) ? qtyVal : 0;
+
+                // Parse GST % with safe fallback
+                const gstVal = parseFloat(gstInput ? gstInput.value : 0);
+                const gstRate = (!isNaN(gstVal) && gstVal >= 0) ? gstVal : 0;
+
+                // Parse Discount % with safe fallback
+                const discVal = parseFloat(discountInput ? discountInput.value : 0);
+                const discountRate = (!isNaN(discVal) && discVal >= 0) ? discVal : 0;
+
+                // 1. Base Subtotal = Unit Price * Quantity
+                const subtotal = unitPrice * quantity;
+
+                // 2. Discount Amount = Subtotal * (Discount Rate / 100)
+                const discountAmount = subtotal * (discountRate / 100);
+
+                // 3. Taxable Value = Subtotal - Discount Amount
+                const taxableValue = Math.max(0, subtotal - discountAmount);
+
+                // 4. GST Amount = Taxable Value * (GST Rate / 100)
+                const gstAmount = taxableValue * (gstRate / 100);
+
+                // 5. Final Item Total = Taxable Value + GST Amount
+                const itemTotal = taxableValue + gstAmount;
+
+                // Update summary elements in the UI
+                const subtotalEl = document.getElementById('calc-subtotal');
+                const discountEl = document.getElementById('calc-discount');
+                const taxableEl = document.getElementById('calc-taxable');
+                const gstEl = document.getElementById('calc-gst');
+                const itemTotalEl = document.getElementById('calc-item-total');
+
+                if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
+                if (discountEl) discountEl.textContent = '- ' + formatCurrency(discountAmount);
+                if (taxableEl) taxableEl.textContent = formatCurrency(taxableValue);
+                if (gstEl) gstEl.textContent = '+ ' + formatCurrency(gstAmount);
+                if (itemTotalEl) itemTotalEl.textContent = formatCurrency(itemTotal);
+            }
+
+            // Hook event listeners
+            document.addEventListener('DOMContentLoaded', function () {
+                const productSelect = document.getElementById('product-select');
+                const quantityInput = document.getElementById('quantity-input');
+                const gstInput = document.getElementById('gst-input');
+                const discountInput = document.getElementById('discount-input');
+
+                if (productSelect) {
+                    productSelect.addEventListener('change', function () {
+                        const selectedId = String(this.value);
+                        // Auto-populate default GST rate if present in product data and GST input is empty/0
+                        if (selectedId && productCatalog[selectedId] && gstInput) {
+                            const defaultGst = parseFloat(productCatalog[selectedId].gst_rate);
+                            if (!isNaN(defaultGst) && defaultGst > 0 && (!gstInput.value || parseFloat(gstInput.value) === 0)) {
+                                gstInput.value = defaultGst;
+                            }
+                        }
+                        calculateItemTotal();
+                    });
+                }
+
+                if (quantityInput) {
+                    quantityInput.addEventListener('input', calculateItemTotal);
+                    quantityInput.addEventListener('change', calculateItemTotal);
+                }
+
+                if (gstInput) {
+                    gstInput.addEventListener('input', calculateItemTotal);
+                    gstInput.addEventListener('change', calculateItemTotal);
+                }
+
+                if (discountInput) {
+                    discountInput.addEventListener('input', calculateItemTotal);
+                    discountInput.addEventListener('change', calculateItemTotal);
+                }
+
+                // Initial calculation on page load
+                calculateItemTotal();
+            });
+
+            // Expose calculateItemTotal function for testing
+            window.calculateItemTotal = calculateItemTotal;
+        })();
+    </script>
+</body>
+
+</html>
