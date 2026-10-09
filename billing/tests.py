@@ -390,3 +390,21 @@ class InvoiceCreationViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Invoice created successfully!")
 
+
+class PDFGenerationLibraryTest(TestCase):
+    """Smoke test to verify that the configured PDF library functions properly."""
+
+    def test_xhtml2pdf_import_and_render_memory(self):
+        import io
+        from xhtml2pdf import pisa
+
+        html_content = "<html><body><h1>Smoke Test PDF</h1><p>Invoice PDF Engine Ready</p></body></html>"
+        output_buffer = io.BytesIO()
+        pdf_status = pisa.CreatePDF(html_content, dest=output_buffer)
+
+        self.assertFalse(pdf_status.err)
+        pdf_bytes = output_buffer.getvalue()
+        self.assertTrue(pdf_bytes.startswith(b'%PDF-'))
+        self.assertGreater(len(pdf_bytes), 500)
+
+
