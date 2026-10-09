@@ -1,15 +1,18 @@
+import io
 import random
 import time
 from datetime import timedelta
 from django.utils import timezone
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, Http404
+from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.db import transaction
 from django.db.models import Q
 from django.core.paginator import Paginator
+from xhtml2pdf import pisa
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
 from billing.forms import InvoiceCreationForm
 
@@ -950,17 +953,28 @@ def create_invoice(request):
             except Exception:
                 return render_form_with_error("An error occurred while saving the invoice. Please try again.")
 
-            messages.success(request, f"Invoice created successfully! (#{invoice.invoice_number})")
+            request.session['latest_invoice_id'] = invoice.id
+            messages.success(
+                request,
+                f"Invoice created successfully! (#{invoice.invoice_number}) "
+                f"<a href=\"/invoice/{invoice.id}/pdf/\" target=\"_blank\" style=\"color:#3b82f6; text-decoration:underline; font-weight:600; margin-left:8px;\">Download PDF</a>"
+            )
             return redirect('create_invoice')
         else:
             form = InvoiceCreationForm()
+
+        latest_invoice_id = request.session.pop('latest_invoice_id', None)
+        latest_invoice = None
+        if latest_invoice_id:
+            latest_invoice = Invoice.objects.filter(id=latest_invoice_id).first()
 
         return render(request, 'billing/create-invoice.html', {
             'user': user,
             'profile': user,
             'form': form,
             'products': products_qs,
-            'product_data': product_data
+            'product_data': product_data,
+            'latest_invoice': latest_invoice,
         })
     except User.DoesNotExist:
         messages.error(request, "Access restricted to Distributors only..!")
@@ -968,3 +982,45 @@ def create_invoice(request):
     except Exception as e:
         messages.error(request, f"An unexpected error occurred: {str(e)}")
         return redirect('distributor_dashboard')
+
+
+def invoice_pdf(request, id):
+    """Generate and return a professional PDF export for the selected invoice."""
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return redirect('distributor_login')
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return redirect('distributor_login')
+
+    try:
+        invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(id=id)
+    except (Invoice.DoesNotExist, ValueError):
+        raise Http404("Invoice not found.")
+
+    context = {
+        'invoice': invoice,
+        'customer': invoice.customer,
+        'items': invoice.items.all(),
+        'distributor': user,
+        'company_name': user.company_name or 'Advance Billing System',
+    }
+
+    html_content = render_to_string('billing/invoice_pdf.html', context)
+    buffer = io.BytesIO()
+    pdf_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
+
+    if pdf_status.err:
+        return HttpResponse('Error generating PDF', status=500)
+
+    pdf_data = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(pdf_data, content_type='application/pdf')
+    clean_inv_num = (invoice.invoice_number or str(invoice.id)).replace(' ', '_').replace('/', '_')
+    filename = f"invoice_{clean_inv_num}.pdf"
+    disposition = 'attachment' if request.GET.get('download') == '1' else 'inline'
+    response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+    return response

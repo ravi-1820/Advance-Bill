@@ -23,4 +23,6 @@ urlpatterns = [
     path('forgot-password/generate-otp/', views.generate_forgot_otp, name='generate_forgot_otp'),
     path('forgot-password/verify-reset/', views.verify_reset_password, name='verify_reset_password'),
     path('create-invoice/', views.create_invoice, name='create_invoice'),
+    path('invoice/<int:id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
+    path('download-invoice-pdf/<int:id>/', views.invoice_pdf, name='download_invoice_pdf'),
 ]

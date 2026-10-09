@@ -408,3 +408,95 @@ class PDFGenerationLibraryTest(TestCase):
         self.assertGreater(len(pdf_bytes), 500)
 
 
+class InvoicePDFExportViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="John Distributor",
+            email="dist@test.com",
+            password="pass",
+            phone="9876543210",
+            distributor_id="DIST-11223",
+            company_name="Apex Global Distribution",
+            usertype="distributor"
+        )
+        self.customer = Customer.objects.create(
+            name="Bob Smith",
+            email="bob@example.com",
+            phone="9123456789",
+            address="456 Elm Street"
+        )
+        self.product1 = Product.objects.create(
+            name="Gaming Mouse",
+            category="Accessories",
+            price=1500.00,
+            stock=30,
+            gst_rate=18.00
+        )
+        self.product2 = Product.objects.create(
+            name="Mechanical Keyboard",
+            category="Accessories",
+            price=3500.00,
+            stock=20,
+            gst_rate=18.00
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-202610-001",
+            total_amount=6500.00
+        )
+        self.item1 = InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product1,
+            quantity=2,
+            unit_price=1500.00,
+            total_price=3000.00
+        )
+        self.item2 = InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product2,
+            quantity=1,
+            unit_price=3500.00,
+            total_price=3500.00
+        )
+
+    def test_pdf_export_unauthenticated_redirects(self):
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice.id]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_pdf_export_authenticated_returns_pdf(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('inline;', response['Content-Disposition'])
+        self.assertIn('INV-202610-001', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+        self.assertGreater(len(response.content), 1000)
+
+    def test_pdf_export_download_parameter(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice.id]) + '?download=1')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment;', response['Content-Disposition'])
+
+    def test_pdf_export_nonexistent_invoice_404(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('invoice_pdf', args=[99999]))
+        self.assertEqual(response.status_code, 404)
+
+
+

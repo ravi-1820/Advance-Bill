@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Tax Invoice - {{ invoice.invoice_number|default:invoice.id }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.5cm 1.2cm 1.8cm 1.2cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            font-size: 9.5pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        .header-table {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 15px;
+        }
+
+        .company-title {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            letter-spacing: -0.5px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .company-subtitle {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+
+        .company-meta {
+            font-size: 8.5pt;
+            color: #475569;
+            margin-top: 5px;
+        }
+
+        .invoice-title-cell {
+            text-align: right;
+            vertical-align: top;
+        }
+
+        .tax-invoice-badge {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2563eb;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .meta-table {
+            width: 100%;
+            margin-bottom: 22px;
+        }
+
+        .meta-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 4px;
+            vertical-align: top;
+        }
+
+        .section-label {
+            font-size: 8pt;
+            font-weight: bold;
+            color: #2563eb;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 3px;
+        }
+
+        .meta-field {
+            font-size: 9pt;
+            margin-bottom: 3px;
+        }
+
+        .meta-field-label {
+            color: #64748b;
+            font-size: 8.5pt;
+            width: 90px;
+            display: inline-block;
+        }
+
+        .meta-field-value {
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            margin-bottom: 18px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .items-table th {
+            background-color: #1e293b;
+            color: #ffffff;
+            font-size: 8.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 6px;
+            border: 1px solid #1e293b;
+        }
+
+        .items-table td {
+            padding: 7px 6px;
+            font-size: 8.5pt;
+            border: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .items-table tr.even {
+            background-color: #f8fafc;
+        }
+
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        /* Summary Table */
+        .summary-wrapper-table {
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 25px;
+        }
+
+        .grand-total-row {
+            background-color: #1e293b;
+            color: #ffffff;
+        }
+
+        .grand-total-row td {
+            padding: 8px 10px;
+            font-size: 11pt;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        /* Footer */
+        .footer-note {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .thank-you {
+            font-size: 10.5pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 4px;
+        }
+
+        .terms-note {
+            font-size: 8pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Company Header -->
+    <table class="header-table">
+        <tr>
+            <td style="width: 60%; vertical-align: top;">
+                <div class="company-title">{{ company_name }}</div>
+                <div class="company-subtitle">Enterprise Advance Billing &amp; Distributor POS</div>
+                <div class="company-meta">
+                    {% if distributor.name %}Representative: <strong>{{ distributor.name }}</strong><br>{% endif %}
+                    {% if distributor.distributor_id %}Distributor ID: <strong>{{ distributor.distributor_id }}</strong><br>{% endif %}
+                    {% if distributor.phone %}Phone: {{ distributor.phone }}{% endif %}
+                    {% if distributor.email %} | Email: {{ distributor.email }}{% endif %}
+                </div>
+            </td>
+            <td class="invoice-title-cell" style="width: 40%;">
+                <div class="tax-invoice-badge">TAX INVOICE</div>
+                <div style="margin-top: 6px; font-size: 9pt; color: #475569;">
+                    <strong>Invoice #:</strong> {{ invoice.invoice_number|default:invoice.id }}<br>
+                    <strong>Date:</strong> {{ invoice.created_at|date:"d M Y, h:i A" }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Invoice Meta & Customer Details -->
+    <table class="meta-table">
+        <tr>
+            <td style="width: 48%; vertical-align: top;">
+                <div class="meta-card">
+                    <div class="section-label">Billed To (Customer Details)</div>
+                    <div class="meta-field"><strong>{{ customer.name }}</strong></div>
+                    {% if customer.phone %}
+                    <div class="meta-field"><span class="meta-field-label">Phone:</span> {{ customer.phone }}</div>
+                    {% endif %}
+                    {% if customer.email %}
+                    <div class="meta-field"><span class="meta-field-label">Email:</span> {{ customer.email }}</div>
+                    {% endif %}
+                    {% if customer.address %}
+                    <div class="meta-field"><span class="meta-field-label">Address:</span> {{ customer.address }}</div>
+                    {% endif %}
+                </div>
+            </td>
+            <td style="width: 4%;"></td>
+            <td style="width: 48%; vertical-align: top;">
+                <div class="meta-card">
+                    <div class="section-label">Invoice Details</div>
+                    <div class="meta-field"><span class="meta-field-label">Invoice No:</span> <span class="meta-field-value">{{ invoice.invoice_number|default:invoice.id }}</span></div>
+                    <div class="meta-field"><span class="meta-field-label">Date &amp; Time:</span> <span class="meta-field-value">{{ invoice.created_at|date:"d M Y, h:i A" }}</span></div>
+                    <div class="meta-field"><span class="meta-field-label">Status:</span> <span class="meta-field-value" style="color: #16a34a;">Generated &amp; Confirmed</span></div>
+                    <div class="meta-field"><span class="meta-field-label">Payment Mode:</span> <span class="meta-field-value">POS Dynamic Settlement</span></div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Line Items Table -->
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 8%;" class="text-center">Sr. No.</th>
+                <th style="width: 38%;" class="text-left">Product Description</th>
+                <th style="width: 16%;" class="text-left">Category</th>
+                <th style="width: 10%;" class="text-center">Qty</th>
+                <th style="width: 13%;" class="text-right">Unit Price</th>
+                <th style="width: 15%;" class="text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="{% cycle '' 'even' %}">
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-left">
+                    <strong>{{ item.product.name }}</strong>
+                </td>
+                <td class="text-left" style="color: #64748b;">{{ item.product.category|default:"General" }}</td>
+                <td class="text-center"><strong>{{ item.quantity }}</strong></td>
+                <td class="text-right">Rs. {{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-right"><strong>Rs. {{ item.total_price|floatformat:2 }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center" style="padding: 15px; color: #64748b;">No items recorded for this invoice.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Summary Box -->
+    <table class="summary-wrapper-table">
+        <tr>
+            <td style="width: 55%; vertical-align: top; padding-right: 15px;">
+                <div style="font-size: 8.5pt; color: #64748b; background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 4px;">
+                    <strong>Notice:</strong> This is a computer-generated tax invoice generated via Advance Billing System POS. All calculations follow statutory GST and trade settlement norms.
+                </div>
+            </td>
+            <td style="width: 45%; vertical-align: top; text-align: right;">
+                <table style="width: 100%; border: 1px solid #cbd5e1;">
+                    <tr>
+                        <td style="padding: 6px 10px; font-size: 9pt; color: #475569; border-bottom: 1px solid #e2e8f0; text-align: left;">Total Items</td>
+                        <td style="padding: 6px 10px; font-size: 9pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; text-align: right;">{{ items.count }}</td>
+                    </tr>
+                    <tr class="grand-total-row">
+                        <td style="padding: 8px 10px; font-size: 11pt; font-weight: bold; color: #ffffff; text-align: left;">Grand Total</td>
+                        <td style="padding: 8px 10px; font-size: 12pt; font-weight: bold; color: #38bdf8; text-align: right;">Rs. {{ invoice.total_amount|floatformat:2 }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer-note">
+        <div class="thank-you">Thank you for your business!</div>
+        <div class="terms-note">
+            Advance Billing System &bull; Distributor Portal &bull; Generated on {{ invoice.created_at|date:"d M Y" }}
+        </div>
+    </div>
+</body>
+</html>
