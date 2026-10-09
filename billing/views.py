@@ -6,6 +6,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from django.db import transaction
 from django.db.models import Q
 from django.core.paginator import Paginator
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
@@ -812,106 +814,143 @@ def create_invoice(request):
         if request.method == 'POST':
             form = InvoiceCreationForm(request.POST)
 
-            # Validate Customer
-            customer = None
-            customer_id = request.POST.get('customer')
-            if customer_id:
-                try:
-                    customer = Customer.objects.get(id=customer_id)
-                except (Customer.DoesNotExist, ValueError):
-                    pass
-
-            if not customer:
-                messages.error(request, "Please select a valid customer.")
-                return render(request, 'billing/create-invoice.html', {
-                    'user': user,
-                    'profile': user,
-                    'form': form,
-                    'products': products_qs,
-                    'product_data': product_data
-                })
-
             # Retrieve dynamic product rows
             product_ids = request.POST.getlist('product')
             quantities = request.POST.getlist('quantity')
             gst_rates = request.POST.getlist('gst')
             discount_rates = request.POST.getlist('discount')
 
+            # Prepare submitted rows for preserving form input on validation error
+            submitted_rows = []
+            for i in range(len(product_ids)):
+                submitted_rows.append({
+                    'product_id': product_ids[i] if i < len(product_ids) else '',
+                    'quantity': quantities[i] if i < len(quantities) else '1',
+                    'gst': gst_rates[i] if i < len(gst_rates) else '0',
+                    'discount': discount_rates[i] if i < len(discount_rates) else '0',
+                })
+
+            def render_form_with_error(error_msg):
+                messages.error(request, error_msg)
+                return render(request, 'billing/create-invoice.html', {
+                    'user': user,
+                    'profile': user,
+                    'form': form,
+                    'products': products_qs,
+                    'product_data': product_data,
+                    'submitted_rows': submitted_rows,
+                })
+
+            # 1. Validate Customer
+            customer_id = request.POST.get('customer')
+            if not customer_id:
+                return render_form_with_error("Please select a valid customer.")
+
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except (Customer.DoesNotExist, ValueError):
+                return render_form_with_error("Selected customer is invalid.")
+
+            # 2. Validate Product Rows
+            if not product_ids:
+                return render_form_with_error("Please select at least one valid product.")
+
+            has_selected_product = any(bool(pid and pid.strip()) for pid in product_ids)
+            if not has_selected_product:
+                return render_form_with_error("Please select at least one valid product.")
+
+            TWO_PLACES = Decimal('0.01')
             row_items = []
-            overall_total = 0.0
+            overall_total = Decimal('0.00')
 
             for i in range(len(product_ids)):
-                pid = product_ids[i]
+                pid = product_ids[i].strip() if product_ids[i] else ''
                 if not pid:
                     continue
+
+                # Validate product existence
                 try:
                     product_obj = Product.objects.get(id=pid)
                 except (Product.DoesNotExist, ValueError):
-                    continue
+                    return render_form_with_error("One or more selected products are invalid.")
 
+                # Validate quantity
+                qty_raw = quantities[i] if i < len(quantities) else '1'
                 try:
-                    qty = int(quantities[i]) if i < len(quantities) and quantities[i] else 1
+                    qty = int(qty_raw)
                     if qty < 1:
-                        qty = 1
-                except ValueError:
-                    qty = 1
+                        return render_form_with_error(f"Quantity for '{product_obj.name}' must be at least 1.")
+                except (ValueError, TypeError):
+                    return render_form_with_error(f"Quantity for '{product_obj.name}' must be a valid whole number.")
 
-                try:
-                    gst = float(gst_rates[i]) if i < len(gst_rates) and gst_rates[i] else 0.0
-                    if gst < 0:
-                        gst = 0.0
-                except ValueError:
-                    gst = 0.0
+                # Validate GST
+                gst_raw = gst_rates[i] if i < len(gst_rates) else ''
+                if gst_raw is not None and str(gst_raw).strip() != '':
+                    try:
+                        gst_val = Decimal(str(gst_raw).strip())
+                        if gst_val < Decimal('0') or gst_val > Decimal('100'):
+                            return render_form_with_error(f"GST rate for '{product_obj.name}' must be between 0 and 100%.")
+                    except (InvalidOperation, ValueError, TypeError):
+                        return render_form_with_error(f"GST rate for '{product_obj.name}' must be a valid number.")
+                else:
+                    gst_val = Decimal('0.00')
 
-                try:
-                    disc = float(discount_rates[i]) if i < len(discount_rates) and discount_rates[i] else 0.0
-                    if disc < 0:
-                        disc = 0.0
-                except ValueError:
-                    disc = 0.0
+                # Validate Discount
+                disc_raw = discount_rates[i] if i < len(discount_rates) else ''
+                if disc_raw is not None and str(disc_raw).strip() != '':
+                    try:
+                        disc_val = Decimal(str(disc_raw).strip())
+                        if disc_val < Decimal('0') or disc_val > Decimal('100'):
+                            return render_form_with_error(f"Discount for '{product_obj.name}' must be between 0 and 100%.")
+                    except (InvalidOperation, ValueError, TypeError):
+                        return render_form_with_error(f"Discount for '{product_obj.name}' must be a valid number.")
+                else:
+                    disc_val = Decimal('0.00')
 
-                unit_price = float(product_obj.price)
-                subtotal = unit_price * qty
-                discount_amount = subtotal * (disc / 100.0)
-                taxable_value = max(0.0, subtotal - discount_amount)
-                gst_amount = taxable_value * (gst / 100.0)
-                row_total = taxable_value + gst_amount
+                # Server-side calculation using exact Decimal arithmetic
+                unit_price = Decimal(str(product_obj.price)).quantize(TWO_PLACES)
+                subtotal = unit_price * Decimal(qty)
+                discount_amount = subtotal * (disc_val / Decimal('100'))
+                taxable_value = max(Decimal('0.00'), subtotal - discount_amount)
+                gst_amount = taxable_value * (gst_val / Decimal('100'))
+                row_total = (taxable_value + gst_amount).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
                 overall_total += row_total
                 row_items.append({
                     'product': product_obj,
                     'quantity': qty,
                     'unit_price': unit_price,
-                    'total_price': round(row_total, 2)
+                    'total_price': row_total,
                 })
 
             if not row_items:
-                messages.error(request, "Please select at least one valid product.")
-                return render(request, 'billing/create-invoice.html', {
-                    'user': user,
-                    'profile': user,
-                    'form': form,
-                    'products': products_qs,
-                    'product_data': product_data
-                })
+                return render_form_with_error("Please select at least one valid product.")
 
-            invoice_num = f"INV-{int(time.time())}-{random.randint(100, 999)}"
-            invoice = Invoice.objects.create(
-                customer=customer,
-                invoice_number=invoice_num,
-                total_amount=round(overall_total, 2)
-            )
+            # 3. Save Invoice and InvoiceItems within an atomic database transaction
+            try:
+                with transaction.atomic():
+                    invoice_num = f"INV-{int(time.time())}-{random.randint(1000, 9999)}"
+                    while Invoice.objects.filter(invoice_number=invoice_num).exists():
+                        invoice_num = f"INV-{int(time.time())}-{random.randint(1000, 9999)}"
 
-            for item in row_items:
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    product=item['product'],
-                    quantity=item['quantity'],
-                    unit_price=item['unit_price'],
-                    total_price=item['total_price']
-                )
+                    invoice = Invoice.objects.create(
+                        customer=customer,
+                        invoice_number=invoice_num,
+                        total_amount=overall_total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                    )
 
-            messages.success(request, f"Invoice #{invoice.invoice_number} created successfully with {len(row_items)} item(s) for {customer.name}!")
+                    for item in row_items:
+                        InvoiceItem.objects.create(
+                            invoice=invoice,
+                            product=item['product'],
+                            quantity=item['quantity'],
+                            unit_price=item['unit_price'],
+                            total_price=item['total_price']
+                        )
+            except Exception:
+                return render_form_with_error("An error occurred while saving the invoice. Please try again.")
+
+            messages.success(request, f"Invoice created successfully! (#{invoice.invoice_number})")
             return redirect('create_invoice')
         else:
             form = InvoiceCreationForm()

@@ -252,3 +252,141 @@ class InvoiceCreationViewTest(TestCase):
         self.assertEqual(item2.quantity, 3)
         self.assertEqual(float(item2.unit_price), 500.00)
         self.assertEqual(float(item2.total_price), 1575.00)
+
+    def test_invalid_customer_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': 99999,
+            'product': self.product.id,
+            'quantity': 1
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "Selected customer is invalid")
+
+    def test_invalid_product_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': 99999,
+            'quantity': 1
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "One or more selected products are invalid")
+
+    def test_invalid_quantity_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': self.product.id,
+            'quantity': 0
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "must be at least 1")
+
+    def test_invalid_gst_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': self.product.id,
+            'quantity': 1,
+            'gst': 150
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "must be between 0 and 100%")
+
+    def test_invalid_discount_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': self.product.id,
+            'quantity': 1,
+            'discount': -5
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "must be between 0 and 100%")
+
+    def test_no_product_rows_rejected(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_count = Invoice.objects.count()
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': '',
+            'quantity': 1
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Invoice.objects.count(), initial_count)
+        self.assertContains(response, "Please select at least one valid product")
+
+    def test_atomic_transaction_rollback_on_failure(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        initial_invoices = Invoice.objects.count()
+        initial_items = InvoiceItem.objects.count()
+
+        from unittest.mock import patch
+
+        with patch('billing.models.InvoiceItem.objects.create', side_effect=RuntimeError("Simulated DB error")):
+            response = self.client.post(reverse('create_invoice'), {
+                'customer': self.customer.id,
+                'product': self.product.id,
+                'quantity': 2
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "An error occurred while saving the invoice")
+
+        # Confirm atomic rollback left no partial invoice or item
+        self.assertEqual(Invoice.objects.count(), initial_invoices)
+        self.assertEqual(InvoiceItem.objects.count(), initial_items)
+
+    def test_success_message_displayed_after_creation(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.post(reverse('create_invoice'), {
+            'customer': self.customer.id,
+            'product': self.product.id,
+            'quantity': 1
+        }, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invoice created successfully!")
+
