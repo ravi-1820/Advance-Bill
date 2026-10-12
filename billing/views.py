@@ -1008,6 +1008,8 @@ def invoice_pdf(request, id):
         'items': invoice.items.all(),
         'distributor': user,
         'company_name': user.company_name or 'Advance Billing System',
+        'qr_code_uri': generate_invoice_qr_base64(invoice),
+        'qr_text': generate_invoice_qr_text(invoice),
     }
 
     html_content = render_to_string('billing/invoice_pdf.html', context)

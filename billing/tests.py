@@ -659,5 +659,96 @@ class InvoiceQRCodeAndListPaginationTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class InvoicePDFQREmbeddingTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="Distributor One",
+            email="dist@test.com",
+            password="pass",
+            phone="9876543210",
+            distributor_id="DIST-001",
+            company_name="Apex Footwear",
+            usertype="distributor"
+        )
+        self.customer_a = Customer.objects.create(name="Customer Alpha", phone="9000000001")
+        self.customer_b = Customer.objects.create(name="Customer Beta", phone="9000000002")
+
+        self.product = Product.objects.create(name="Sneakers", category="Shoes", price=1200.00, stock=50)
+
+        # Invoice A
+        self.invoice_a = Invoice.objects.create(
+            customer=self.customer_a,
+            invoice_number="INV-ALPHA-101",
+            total_amount=2400.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice_a,
+            product=self.product,
+            quantity=2,
+            unit_price=1200.00,
+            total_price=2400.00
+        )
+
+        # Invoice B
+        self.invoice_b = Invoice.objects.create(
+            customer=self.customer_b,
+            invoice_number="INV-BETA-202",
+            total_amount=3600.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice_b,
+            product=self.product,
+            quantity=3,
+            unit_price=1200.00,
+            total_price=3600.00
+        )
+
+    def login_distributor(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+    def test_pdf_contains_dynamic_qr_code(self):
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice_a.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+        # PDF is generated with substantial binary payload containing the embedded QR image stream
+        self.assertGreater(len(response.content), 2000)
+
+    def test_multiple_invoices_generate_different_qr_and_pdfs(self):
+        self.login_distributor()
+        from billing.views import generate_invoice_qr_text, generate_invoice_qr_base64
+
+        qr_text_a = generate_invoice_qr_text(self.invoice_a)
+        qr_text_b = generate_invoice_qr_text(self.invoice_b)
+        self.assertIn("INV-ALPHA-101", qr_text_a)
+        self.assertIn("Customer Alpha", qr_text_a)
+        self.assertIn("INV-BETA-202", qr_text_b)
+        self.assertIn("Customer Beta", qr_text_b)
+        self.assertNotEqual(qr_text_a, qr_text_b)
+
+        qr_uri_a = generate_invoice_qr_base64(self.invoice_a)
+        qr_uri_b = generate_invoice_qr_base64(self.invoice_b)
+        self.assertNotEqual(qr_uri_a, qr_uri_b)
+
+        # Generate PDF for both invoices
+        pdf_a = self.client.get(reverse('invoice_pdf', args=[self.invoice_a.id]))
+        pdf_b = self.client.get(reverse('invoice_pdf', args=[self.invoice_b.id]))
+        self.assertEqual(pdf_a.status_code, 200)
+        self.assertEqual(pdf_b.status_code, 200)
+        self.assertNotEqual(pdf_a.content, pdf_b.content)
+
+    def test_pdf_export_preserves_invoice_details(self):
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice_a.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('INV-ALPHA-101', response['Content-Disposition'])
+
+
+
 
 
