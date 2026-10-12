@@ -1,4 +1,5 @@
 import io
+import base64
 import random
 import time
 from datetime import timedelta
@@ -12,6 +13,7 @@ from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.db import transaction
 from django.db.models import Q
 from django.core.paginator import Paginator
+import qrcode
 from xhtml2pdf import pisa
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
 from billing.forms import InvoiceCreationForm
@@ -1024,3 +1026,151 @@ def invoice_pdf(request, id):
     disposition = 'attachment' if request.GET.get('download') == '1' else 'inline'
     response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
     return response
+
+
+def generate_invoice_qr_text(invoice):
+    """
+    Construct standardized text payload for invoice QR code:
+    Invoice ID: <id>
+    Customer: <name>
+    Product Count: <count>
+    Total Bill: Rs <amount>
+    Invoice Date: <date>
+    """
+    inv_id = invoice.invoice_number or str(invoice.id)
+    cust_name = invoice.customer.name if invoice.customer else "Unknown"
+
+    if hasattr(invoice, '_prefetched_objects_cache') and 'items' in invoice._prefetched_objects_cache:
+        prod_count = len(invoice.items.all())
+    else:
+        prod_count = invoice.items.count()
+
+    total_val = invoice.total_amount if invoice.total_amount is not None else Decimal('0.00')
+    total_str = f"Rs {total_val:,.2f}"
+
+    lines = [
+        f"Invoice ID: {inv_id}",
+        f"Customer: {cust_name}",
+        f"Product Count: {prod_count}",
+        f"Total Bill: {total_str}",
+    ]
+
+    if invoice.created_at:
+        inv_date = invoice.created_at.strftime('%d-%m-%Y')
+        lines.append(f"Invoice Date: {inv_date}")
+
+    return "\n".join(lines)
+
+
+def generate_invoice_qr_base64(invoice):
+    """
+    Generate dynamic QR code in-memory and return base64 Data URI string.
+    Avoids disk writes and duplicate permanent image accumulation.
+    """
+    qr_text = generate_invoice_qr_text(invoice)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=6,
+        border=2,
+    )
+    qr.add_data(qr_text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    b64_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    buffer.close()
+    return f"data:image/png;base64,{b64_str}"
+
+
+def invoice_list(request):
+    """
+    Retrieve existing invoices from database with select_related & prefetch_related,
+    paginate them, compute product count, generate dynamic QR codes, and render the table.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return redirect('distributor_login')
+
+        user = User.objects.get(id=user_id, usertype='distributor')
+
+        search = request.GET.get('search', '').strip()
+        invoices_qs = Invoice.objects.select_related('customer').prefetch_related('items').order_by('-created_at', '-id')
+
+        if search:
+            invoices_qs = invoices_qs.filter(
+                Q(invoice_number__icontains=search) |
+                Q(customer__name__icontains=search) |
+                Q(customer__phone__icontains=search)
+            )
+
+        total_invoices = invoices_qs.count()
+
+        paginator = Paginator(invoices_qs, 10)
+        page_number = request.GET.get('page', 1)
+        invoices_page = paginator.get_page(page_number)
+
+        # Attach computed metadata and QR code data URI to items on the current page
+        for inv in invoices_page:
+            inv.product_count = len(inv.items.all())
+            inv.qr_code_uri = generate_invoice_qr_base64(inv)
+            inv.qr_text = generate_invoice_qr_text(inv)
+
+        return render(request, 'billing/invoice-list.html', {
+            'user': user,
+            'profile': user,
+            'invoices': invoices_page,
+            'search': search,
+            'total_invoices': total_invoices,
+        })
+    except User.DoesNotExist:
+        messages.error(request, "Access restricted to Distributors only..!")
+        return redirect('distributor_login')
+    except Exception as e:
+        messages.error(request, f"An unexpected error occurred: {str(e)}")
+        return redirect('distributor_dashboard')
+
+
+def invoice_qr_code(request, id):
+    """
+    Endpoint to view or download a standalone PNG QR code for an invoice.
+    """
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return redirect('distributor_login')
+
+    try:
+        user = User.objects.get(id=user_id, usertype='distributor')
+    except User.DoesNotExist:
+        return redirect('distributor_login')
+
+    try:
+        invoice = Invoice.objects.select_related('customer').prefetch_related('items').get(id=id)
+    except (Invoice.DoesNotExist, ValueError):
+        raise Http404("Invoice not found.")
+
+    qr_text = generate_invoice_qr_text(invoice)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,
+        border=3,
+    )
+    qr.add_data(qr_text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    png_data = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(png_data, content_type='image/png')
+    clean_num = (invoice.invoice_number or str(invoice.id)).replace(' ', '_').replace('/', '_')
+    if request.GET.get('download') == '1':
+        response['Content-Disposition'] = f'attachment; filename="qr_invoice_{clean_num}.png"'
+    else:
+        response['Content-Disposition'] = f'inline; filename="qr_invoice_{clean_num}.png"'
+    return response
+

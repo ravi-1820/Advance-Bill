@@ -499,4 +499,165 @@ class InvoicePDFExportViewTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class InvoiceQRCodeAndListPaginationTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="Test Distributor",
+            email="distributor@test.com",
+            password="pass123",
+            phone="9876543210",
+            distributor_id="DIST-9999",
+            company_name="Test POS",
+            usertype="distributor"
+        )
+        self.customer = Customer.objects.create(
+            name="Ravi Suthar",
+            email="ravi@example.com",
+            phone="9876500000",
+            address="Ahmedabad, Gujarat"
+        )
+        self.product1 = Product.objects.create(
+            name="Leather Shoes",
+            category="Footwear",
+            price=2500.00,
+            stock=20,
+            gst_rate=18.00
+        )
+        self.product2 = Product.objects.create(
+            name="Shoe Polish",
+            category="Accessories",
+            price=500.00,
+            stock=50,
+            gst_rate=18.00
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-1001",
+            total_amount=5500.00
+        )
+        self.item1 = InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product1,
+            quantity=2,
+            unit_price=2500.00,
+            total_price=5000.00
+        )
+        self.item2 = InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product2,
+            quantity=1,
+            unit_price=500.00,
+            total_price=500.00
+        )
+
+    def login_distributor(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session['name'] = self.distributor.company_name
+        session.save()
+
+    def test_qr_text_generation_content(self):
+        from billing.views import generate_invoice_qr_text
+        qr_text = generate_invoice_qr_text(self.invoice)
+        self.assertIn("Invoice ID: INV-1001", qr_text)
+        self.assertIn("Customer: Ravi Suthar", qr_text)
+        self.assertIn("Product Count: 2", qr_text)
+        self.assertIn("Total Bill: Rs 5,500.00", qr_text)
+        self.assertIn("Invoice Date:", qr_text)
+
+    def test_qr_base64_generation(self):
+        from billing.views import generate_invoice_qr_base64
+        qr_uri = generate_invoice_qr_base64(self.invoice)
+        self.assertTrue(qr_uri.startswith("data:image/png;base64,"))
+        self.assertGreater(len(qr_uri), 100)
+
+    def test_invoice_list_unauthenticated_redirects(self):
+        response = self.client.get(reverse('invoice_list'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.endswith(reverse('distributor_login')) or response.url == reverse('distributor_login'))
+
+    def test_invoice_list_authenticated_displays_invoices(self):
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'billing/invoice-list.html')
+        self.assertContains(response, "INV-1001")
+        self.assertContains(response, "Ravi Suthar")
+        self.assertContains(response, "5500.00")
+        self.assertContains(response, "data:image/png;base64,")
+
+    def test_invoice_list_empty_state(self):
+        InvoiceItem.objects.all().delete()
+        Invoice.objects.all().delete()
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No invoices have been generated yet")
+
+    def test_invoice_list_search_filtering(self):
+        self.login_distributor()
+        # Search match
+        res_found = self.client.get(reverse('invoice_list') + '?search=Ravi')
+        self.assertEqual(res_found.status_code, 200)
+        self.assertContains(res_found, "INV-1001")
+
+        # Search no match
+        res_not_found = self.client.get(reverse('invoice_list') + '?search=NonExistentCustomer')
+        self.assertEqual(res_not_found.status_code, 200)
+        self.assertContains(res_not_found, "No invoices found matching")
+
+    def test_invoice_list_pagination(self):
+        self.login_distributor()
+        # Create 14 additional invoices to exceed page size of 10
+        for i in range(1, 15):
+            inv = Invoice.objects.create(
+                customer=self.customer,
+                invoice_number=f"INV-PAG-{i:03d}",
+                total_amount=100.00 * i
+            )
+            InvoiceItem.objects.create(
+                invoice=inv,
+                product=self.product1,
+                quantity=1,
+                unit_price=100.00,
+                total_price=100.00
+            )
+
+        # Page 1
+        res_p1 = self.client.get(reverse('invoice_list') + '?page=1')
+        self.assertEqual(res_p1.status_code, 200)
+        self.assertEqual(len(res_p1.context['invoices']), 10)
+        self.assertTrue(res_p1.context['invoices'].has_next())
+
+        # Page 2
+        res_p2 = self.client.get(reverse('invoice_list') + '?page=2')
+        self.assertEqual(res_p2.status_code, 200)
+        self.assertEqual(len(res_p2.context['invoices']), 5)
+        self.assertTrue(res_p2.context['invoices'].has_previous())
+
+        # Invalid page safely handled (returns last page or page 1)
+        res_invalid = self.client.get(reverse('invoice_list') + '?page=999')
+        self.assertEqual(res_invalid.status_code, 200)
+        self.assertEqual(res_invalid.context['invoices'].number, 2)
+
+    def test_invoice_qr_code_direct_endpoint(self):
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_qr_code', args=[self.invoice.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'image/png')
+        self.assertIn('inline;', response['Content-Disposition'])
+
+        res_download = self.client.get(reverse('invoice_qr_code', args=[self.invoice.id]) + '?download=1')
+        self.assertEqual(res_download.status_code, 200)
+        self.assertIn('attachment;', res_download['Content-Disposition'])
+
+    def test_invoice_qr_code_nonexistent_invoice_404(self):
+        self.login_distributor()
+        response = self.client.get(reverse('invoice_qr_code', args=[99999]))
+        self.assertEqual(response.status_code, 404)
+
+
+
 

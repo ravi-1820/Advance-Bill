@@ -1,2 +1,4 @@
 Django>=5.0
 xhtml2pdf>=0.2.23
+qrcode>=8.0
+

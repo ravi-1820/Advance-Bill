@@ -468,13 +468,21 @@
                     <h2>Create Invoice</h2>
                     <p>Dynamic multi-product billing with real-time row totals & live invoice settlement</p>
                 </div>
-                <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="19" y1="12" x2="5" y2="12"/>
-                        <polyline points="12 19 5 12 12 5"/>
-                    </svg>
-                    <span>Back to Dashboard</span>
-                </a>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <a href="{% url 'invoice_list' %}" class="btn-shadcn btn-outline">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        <span>View Invoices</span>
+                    </a>
+                    <a href="{% url 'distributor_dashboard' %}" class="btn-shadcn btn-secondary">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        <span>Back to Dashboard</span>
+                    </a>
+                </div>
             </div>
         </div>
 
