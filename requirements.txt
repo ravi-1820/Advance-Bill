@@ -1,4 +1,14 @@
-Django>=5.0
-xhtml2pdf>=0.2.23
-qrcode>=8.0
+# Django Web Framework
+Django>=5.0,<7.0
+asgiref>=3.8.0
+sqlparse>=0.5.0
+tzdata>=2024.1; sys_platform == 'win32'
 
+# QR Code Generation (requires Pillow for image export)
+qrcode[pil]>=8.0
+pillow>=10.0.0
+
+# PDF Invoice Generation & Export
+xhtml2pdf>=0.2.23
+reportlab>=4.0.0
+pypdf>=5.0.0

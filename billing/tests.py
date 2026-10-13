@@ -498,6 +498,39 @@ class InvoicePDFExportViewTest(TestCase):
         response = self.client.get(reverse('invoice_pdf', args=[99999]))
         self.assertEqual(response.status_code, 404)
 
+    def test_download_invoice_pdf_named_route(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('download_invoice_pdf', args=[self.invoice.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment;', response['Content-Disposition'])
+        self.assertIn('invoice_INV-202610-001.pdf', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+
+    def test_download_invoice_pdf_nonexistent_404(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('download_invoice_pdf', args=[99999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_invoice_list_contains_download_pdf_button(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        response = self.client.get(reverse('invoice_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Download PDF')
+        self.assertContains(response, reverse('download_invoice_pdf', args=[self.invoice.id]))
+
 
 class InvoiceQRCodeAndListPaginationTest(TestCase):
     def setUp(self):

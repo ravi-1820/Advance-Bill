@@ -1012,22 +1012,29 @@ def invoice_pdf(request, id):
         'qr_text': generate_invoice_qr_text(invoice),
     }
 
-    html_content = render_to_string('billing/invoice_pdf.html', context)
-    buffer = io.BytesIO()
-    pdf_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
+    try:
+        html_content = render_to_string('billing/invoice_pdf.html', context)
+        buffer = io.BytesIO()
+        pdf_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
 
-    if pdf_status.err:
+        if pdf_status.err:
+            return HttpResponse('Error generating PDF', status=500)
+
+        pdf_data = buffer.getvalue()
+        buffer.close()
+
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        clean_inv_num = (invoice.invoice_number or str(invoice.id)).replace(' ', '_').replace('/', '_')
+        filename = f"invoice_{clean_inv_num}.pdf"
+        is_download = (
+            request.GET.get('download') in ('1', 'true', 'yes') or
+            (request.resolver_match and request.resolver_match.url_name == 'download_invoice_pdf')
+        )
+        disposition = 'attachment' if is_download else 'inline'
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        return response
+    except Exception:
         return HttpResponse('Error generating PDF', status=500)
-
-    pdf_data = buffer.getvalue()
-    buffer.close()
-
-    response = HttpResponse(pdf_data, content_type='application/pdf')
-    clean_inv_num = (invoice.invoice_number or str(invoice.id)).replace(' ', '_').replace('/', '_')
-    filename = f"invoice_{clean_inv_num}.pdf"
-    disposition = 'attachment' if request.GET.get('download') == '1' else 'inline'
-    response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
-    return response
 
 
 def generate_invoice_qr_text(invoice):

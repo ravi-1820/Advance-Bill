@@ -637,7 +637,7 @@
                             </td>
                             <td style="text-align: center;">
                                 <div class="qr-thumb-box"
-                                     onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}')"
+                                     onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'download_invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}')"
                                      title="Click to view QR code">
                                     <img src="{{ invoice.qr_code_uri }}" alt="QR Code for Invoice #{{ invoice.invoice_number|default:invoice.id }}" class="qr-thumb-img">
                                 </div>
@@ -645,16 +645,16 @@
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 6px;">
                                     <button type="button"
-                                            onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}')"
+                                            onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'download_invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}')"
                                             class="btn-shadcn btn-outline"
                                             style="padding: 0.35rem 0.65rem; font-size: 0.78rem;"
                                             title="View QR Code">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                                         <span>QR</span>
                                     </button>
-                                    <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn-shadcn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" title="Download PDF">
+                                    <a href="{% url 'download_invoice_pdf' invoice.id %}" download="invoice_{{ invoice.invoice_number|default:invoice.id }}.pdf" class="btn-shadcn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;" title="Download PDF">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                        <span>PDF</span>
+                                        <span>Download PDF</span>
                                     </a>
                                 </div>
                             </td>
@@ -735,9 +735,9 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span>Download QR</span>
                 </a>
-                <a id="qr-modal-pdf-link" href="#" target="_blank" class="btn-shadcn btn-primary" style="flex: 1;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <span>View PDF</span>
+                <a id="qr-modal-pdf-link" href="#" download class="btn-shadcn btn-primary" style="flex: 1;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Download PDF</span>
                 </a>
             </div>
         </div>
