@@ -2200,6 +2200,234 @@ class AdminRegistrationAndProductValidationModuleTest(TestCase):
         self.assertEqual(pdf_resp['Content-Type'], 'application/pdf')
 
 
+class AdminDedicatedReportsSectionTest(TestCase):
+    """
+    Task 3: Functional, Validation, Security and Calculation Tests for
+    Dedicated Reports Section in Admin Dashboard.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(
+            email="reports.admin@enterprise.com",
+            password="AdminReportPass2026!",
+            name="Reports Admin",
+            usertype="admin"
+        )
+        self.distributor = User.objects.create_user(
+            email="reports.dist@enterprise.com",
+            password="DistReportPass2026!",
+            name="Reports Dist",
+            usertype="distributor"
+        )
+        self.product_a = Product.objects.create(
+            name="Thermal POS Printer 80mm",
+            category="Hardware",
+            price=4500.00,
+            stock=30,
+            gst_rate=18.00
+        )
+        self.product_b = Product.objects.create(
+            name="Thermal Receipt Paper Roll (Box of 50)",
+            category="Supplies",
+            price=1500.00,
+            stock=100,
+            gst_rate=12.00
+        )
+        self.customer_1 = Customer.objects.create(
+            name="Grand Horizon Mart",
+            email="horizon@mart.com",
+            phone="9876543210"
+        )
+        self.customer_2 = Customer.objects.create(
+            name="Apex Supermarket",
+            email="apex@supermarket.com",
+            phone="9123456789"
+        )
+
+        # Create historical invoice records across different dates
+        # Invoice 1: Today
+        self.inv_1 = Invoice.objects.create(
+            customer=self.customer_1,
+            invoice_number="INV-REP-001",
+            total_amount=10500.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.inv_1,
+            product=self.product_a,
+            quantity=2,
+            unit_price=4500.00,
+            total_price=9000.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.inv_1,
+            product=self.product_b,
+            quantity=1,
+            unit_price=1500.00,
+            total_price=1500.00
+        )
+
+        # Invoice 2: 5 days ago (in this week & month)
+        self.inv_2 = Invoice.objects.create(
+            customer=self.customer_2,
+            invoice_number="INV-REP-002",
+            total_amount=6000.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.inv_2,
+            product=self.product_b,
+            quantity=4,
+            unit_price=1500.00,
+            total_price=6000.00
+        )
+        # Manually backdate inv_2 to 5 days ago
+        Invoice.objects.filter(id=self.inv_2.id).update(created_at=timezone.now() - timedelta(days=5))
+
+        # Invoice 3: 40 days ago (older than week and month)
+        self.inv_3 = Invoice.objects.create(
+            customer=self.customer_1,
+            invoice_number="INV-REP-003",
+            total_amount=4500.00
+        )
+        InvoiceItem.objects.create(
+            invoice=self.inv_3,
+            product=self.product_a,
+            quantity=1,
+            unit_price=4500.00,
+            total_price=4500.00
+        )
+        Invoice.objects.filter(id=self.inv_3.id).update(created_at=timezone.now() - timedelta(days=40))
+
+    def authenticate_admin(self):
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+    def test_reports_page_unauthorized_access(self):
+        """Anonymous and distributor users must be denied access to reports."""
+        # 1. Anonymous access
+        r_anon = self.client.get(reverse('admin_reports'))
+        self.assertEqual(r_anon.status_code, 302)
+        self.assertIn('/admin-login/', r_anon.url)
+
+        # 2. Distributor access
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+        r_dist = self.client.get(reverse('admin_reports'))
+        self.assertEqual(r_dist.status_code, 302)
+        self.assertIn('/admin-login/', r_dist.url)
+
+    def test_reports_page_loading_success_admin(self):
+        """Authenticated Admin can load reports dashboard and see accurate aggregate figures."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'billing/admin-reports.html')
+        self.assertContains(resp, "Sales &amp; Analytics Reports")
+        self.assertContains(resp, "Total Invoices")
+        self.assertContains(resp, "Total Revenue")
+
+        # Verify context calculations for 'all' scope
+        # Total invoices: 3
+        self.assertEqual(resp.context['total_invoices'], 3)
+        # Total sales: 10500 + 6000 + 4500 = 21000
+        self.assertEqual(float(resp.context['total_sales']), 21000.00)
+        # Total units sold: 2 + 1 + 4 + 1 = 8 units
+        self.assertEqual(resp.context['total_units_sold'], 8)
+        # Avg invoice value: 21000 / 3 = 7000
+        self.assertEqual(float(resp.context['avg_invoice_value']), 7000.00)
+
+    def test_reports_date_filter_today(self):
+        """Filtering by 'today' only includes invoices created today."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {'preset': 'today'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 1)
+        self.assertEqual(float(resp.context['total_sales']), 10500.00)
+        self.assertEqual(resp.context['total_units_sold'], 3)
+
+    def test_reports_date_filter_week(self):
+        """Filtering by 'week' includes invoices created in the last 7 days."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {'preset': 'week'})
+        self.assertEqual(resp.status_code, 200)
+        # inv_1 (today) + inv_2 (5 days ago) = 2 invoices
+        self.assertEqual(resp.context['total_invoices'], 2)
+        # 10500 + 6000 = 16500
+        self.assertEqual(float(resp.context['total_sales']), 16500.00)
+        self.assertEqual(resp.context['total_units_sold'], 7)
+
+    def test_reports_date_filter_custom_range(self):
+        """Custom date range accurately filters records between start_date and end_date."""
+        self.authenticate_admin()
+        today_str = timezone.now().strftime('%Y-%m-%d')
+        start_6_days_ago = (timezone.now() - timedelta(days=6)).strftime('%Y-%m-%d')
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': start_6_days_ago,
+            'end_date': today_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 2)
+        self.assertEqual(float(resp.context['total_sales']), 16500.00)
+
+    def test_reports_product_wise_breakdown(self):
+        """Product-wise sales performance table computes real units sold and total revenue."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {'preset': 'all'})
+        self.assertEqual(resp.status_code, 200)
+        product_sales = resp.context['product_sales']
+        self.assertTrue(len(product_sales) > 0)
+
+        # product_a revenue: 9000 (inv_1) + 4500 (inv_3) = 13500, units: 3
+        # product_b revenue: 1500 (inv_1) + 6000 (inv_2) = 7500, units: 5
+        prod_a_stat = next(p for p in product_sales if p['product__name'] == "Thermal POS Printer 80mm")
+        self.assertEqual(prod_a_stat['units_sold'], 3)
+        self.assertEqual(float(prod_a_stat['total_revenue']), 13500.00)
+
+        prod_b_stat = next(p for p in product_sales if p['product__name'] == "Thermal Receipt Paper Roll (Box of 50)")
+        self.assertEqual(prod_b_stat['units_sold'], 5)
+        self.assertEqual(float(prod_b_stat['total_revenue']), 7500.00)
+
+    def test_reports_search_and_pagination(self):
+        """Search by customer name and invoice number works correctly."""
+        self.authenticate_admin()
+        # Search for 'Apex'
+        resp_search = self.client.get(reverse('admin_reports'), {'search': 'Apex'})
+        self.assertEqual(resp_search.status_code, 200)
+        self.assertEqual(resp_search.context['total_invoices'], 1)
+        self.assertContains(resp_search, "Apex Supermarket")
+        self.assertNotContains(resp_search, "Grand Horizon Mart")
+
+        # Search for 'INV-REP-001'
+        resp_inv = self.client.get(reverse('admin_reports'), {'search': 'INV-REP-001'})
+        self.assertEqual(resp_inv.status_code, 200)
+        self.assertEqual(resp_inv.context['total_invoices'], 1)
+        self.assertContains(resp_inv, "INV-REP-001")
+
+    def test_reports_pdf_download_success(self):
+        """Download PDF report generates valid PDF with correct Content-Type and headers."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports_pdf'), {'preset': 'all'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('attachment;', resp['Content-Disposition'])
+        self.assertIn('Admin_Sales_Report_all_', resp['Content-Disposition'])
+        # Verify valid PDF byte structure starts with %PDF
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_reports_pdf_download_unauthorized(self):
+        """Unauthenticated or distributor requests to PDF download endpoint must be redirected."""
+        r_anon = self.client.get(reverse('admin_reports_pdf'))
+        self.assertEqual(r_anon.status_code, 302)
+        self.assertIn('/admin-login/', r_anon.url)
+
+
+
 
 
 

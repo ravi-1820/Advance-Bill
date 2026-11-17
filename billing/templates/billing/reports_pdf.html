@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Sales Audit Report - Advance Billing System</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.4cm 1.2cm 1.6cm 1.2cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            font-size: 9pt;
+            line-height: 1.35;
+            margin: 0;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table {
+            margin-bottom: 18px;
+            border-bottom: 2px solid #059669;
+            padding-bottom: 12px;
+        }
+
+        .company-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #065f46;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .company-subtitle {
+            font-size: 8pt;
+            color: #059669;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .report-title {
+            text-align: right;
+            vertical-align: top;
+        }
+
+        .report-title-badge {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        .report-meta {
+            font-size: 7.5pt;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        /* Metric Cards Box */
+        .metrics-table {
+            width: 100%;
+            margin-bottom: 18px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .metrics-table td {
+            padding: 8px 10px;
+            text-align: center;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .metrics-table td:last-child {
+            border-right: none;
+        }
+
+        .metric-label {
+            font-size: 7pt;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .metric-value {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .metric-value.accent {
+            color: #059669;
+        }
+
+        .section-heading {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #0f172a;
+            border-bottom: 1.5px solid #059669;
+            padding-bottom: 4px;
+            margin-top: 14px;
+            margin-bottom: 8px;
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%;
+            margin-bottom: 16px;
+            border: 0.5px solid #cbd5e1;
+        }
+
+        .data-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 6px 8px;
+            border: 0.5px solid #cbd5e1;
+            text-align: left;
+        }
+
+        .data-table td {
+            font-size: 8pt;
+            padding: 5px 8px;
+            border: 0.5px solid #cbd5e1;
+            color: #1e293b;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .badge-paid {
+            color: #059669;
+            font-weight: bold;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            padding-top: 8px;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 7.5pt;
+            color: #64748b;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Table -->
+    <table class="header-table">
+        <tr>
+            <td style="width: 55%; vertical-align: top;">
+                <div class="company-title">Advance Billing System</div>
+                <div class="company-subtitle">Enterprise QR Suite &bull; Master Administration</div>
+                <div style="font-size: 8pt; color: #475569; margin-top: 4px;">
+                    Confidential Financial Sales &amp; Audit Log
+                </div>
+            </td>
+            <td class="report-title" style="width: 45%;">
+                <div class="report-title-badge">Sales Audit Report</div>
+                <div class="report-meta">
+                    <strong>Scope:</strong> {{ active_filter_label }}<br>
+                    <strong>Generated At:</strong> {{ generated_at|date:"M d, Y &bull; H:i:s" }}<br>
+                    <strong>Audited By:</strong> {{ admin.name|default:admin.email }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- 4 Key Aggregate Metrics -->
+    <table class="metrics-table">
+        <tr>
+            <td style="width: 20%;">
+                <div class="metric-label">Invoices</div>
+                <div class="metric-value">{{ total_invoices }}</div>
+            </td>
+            <td style="width: 28%;">
+                <div class="metric-label">Total Revenue</div>
+                <div class="metric-value accent">Rs. {{ total_sales|floatformat:2 }}</div>
+            </td>
+            <td style="width: 24%;">
+                <div class="metric-label">Units Sold</div>
+                <div class="metric-value">{{ total_units_sold }}</div>
+            </td>
+            <td style="width: 28%;">
+                <div class="metric-label">Avg. Invoice Value</div>
+                <div class="metric-value">Rs. {{ avg_invoice_value|floatformat:2 }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Top Products Performance -->
+    <div class="section-heading">Top Product Demand &amp; Revenue Breakdown</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 28px;" class="text-center">#</th>
+                <th>Product Description</th>
+                <th style="width: 140px;">Category</th>
+                <th style="width: 80px;" class="text-right">Units Sold</th>
+                <th style="width: 110px;" class="text-right">Gross Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in product_sales %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td><strong>{{ item.product__name }}</strong></td>
+                <td>{{ item.product__category }}</td>
+                <td class="text-right">{{ item.units_sold }}</td>
+                <td class="text-right" style="color: #059669; font-weight: bold;">Rs. {{ item.total_revenue|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center" style="padding: 12px; color: #64748b;">
+                    No product transactions recorded during this period.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Detailed Invoices Ledger -->
+    <div class="section-heading">Audited Invoices Ledger (Chronological)</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 95px;">Invoice #</th>
+                <th>Customer Name</th>
+                <th style="width: 90px;">Contact Phone</th>
+                <th style="width: 105px;">Timestamp</th>
+                <th style="width: 45px;" class="text-center">Items</th>
+                <th style="width: 80px;" class="text-right">Amount</th>
+                <th style="width: 55px;" class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in invoices %}
+            <tr>
+                <td><strong>{{ inv.invoice_number|default:inv.id }}</strong></td>
+                <td>{{ inv.customer.name }}</td>
+                <td>{{ inv.customer.phone|default:"-" }}</td>
+                <td>{{ inv.created_at|date:"M d, Y H:i" }}</td>
+                <td class="text-center">{{ inv.items.count }}</td>
+                <td class="text-right">Rs. {{ inv.total_amount|floatformat:2 }}</td>
+                <td class="text-center"><span class="badge-paid">Paid</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 12px; color: #64748b;">
+                    No invoice records found matching the filter criteria.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Footer Note -->
+    <div class="footer-note">
+        This is an official computer-generated audit report produced by Advance Billing System with QR.<br>
+        Report generated under Master Administrator supervision. All currency values are in INR (Rs.).
+    </div>
+
+</body>
+</html>

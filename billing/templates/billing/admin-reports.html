@@ -1,0 +1,942 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Sales Analytics | Admin Control Center</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}?v=2">
+    <style>
+        :root {
+            --bg-main: #09090b;
+            --card-bg: #121215;
+            --card-elevated: #18181b;
+            --border: #27272a;
+            --border-hover: #3f3f46;
+            --text-primary: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --admin-primary: #10b981;
+            --admin-accent: #34d399;
+            --admin-glow: rgba(16, 185, 129, 0.15);
+            --badge-bg: #18181b;
+            --badge-text: #a1a1aa;
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.12);
+        }
+
+        body.theme-light {
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --card-elevated: #f1f5f9;
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            --admin-primary: #059669;
+            --admin-accent: #10b981;
+            --admin-glow: rgba(16, 185, 129, 0.1);
+            --badge-bg: #f1f5f9;
+            --badge-text: #475569;
+            --danger: #dc2626;
+            --danger-bg: rgba(220, 38, 38, 0.1);
+            --warning: #d97706;
+            --warning-bg: rgba(217, 119, 6, 0.1);
+            --success: #059669;
+            --success-bg: rgba(5, 150, 105, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Top Navigation Header (Shadcn Navbar) */
+        .top-navbar {
+            width: 100%;
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .nav-inner {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 0.85rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--admin-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--admin-glow);
+        }
+
+        .brand-titles h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            color: var(--text-primary);
+        }
+
+        .brand-titles span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--admin-accent);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.45rem 0.85rem;
+            border-radius: 7px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link-item:hover {
+            color: var(--text-primary);
+            background: var(--card-elevated);
+        }
+
+        .nav-link-item.active {
+            color: var(--admin-accent);
+            background: rgba(16, 185, 129, 0.1);
+            font-weight: 600;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .btn-shadcn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--admin-primary);
+            color: #ffffff;
+            border-color: transparent;
+        }
+        .btn-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--admin-glow);
+        }
+
+        .btn-secondary {
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+            border-color: var(--border-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .btn-outline:hover {
+            background: var(--card-elevated);
+            border-color: var(--border-hover);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.78rem;
+            border-radius: 6px;
+            gap: 5px;
+        }
+
+        /* Badges */
+        .shadcn-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            border: 1px solid var(--border);
+        }
+
+        .badge-live {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* Main Viewport Container */
+        .dashboard-container {
+            max-width: 1320px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.75rem 1.5rem 3rem 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Cards */
+        .shadcn-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header-styled {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.85rem;
+        }
+
+        .card-header-styled h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        /* Page Heading Banner */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .header-left p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.15rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: all 0.15s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .metric-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-muted);
+        }
+
+        .metric-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .metric-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+            background: var(--card-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--admin-accent);
+        }
+
+        .metric-number {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .metric-foot {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Filter Control Bar */
+        .filter-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .preset-pills {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .preset-pill {
+            padding: 0.38rem 0.85rem;
+            border-radius: 7px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            color: var(--text-muted);
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            transition: all 0.15s ease;
+        }
+
+        .preset-pill:hover {
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .preset-pill.active {
+            background: var(--admin-primary);
+            color: #ffffff;
+            border-color: var(--admin-primary);
+            font-weight: 600;
+        }
+
+        .custom-filter-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .date-input {
+            height: 36px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 0 10px;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .date-input:focus {
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 2px var(--admin-glow);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+            max-width: 380px;
+        }
+
+        .search-box svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 36px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 0 12px 0 34px;
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 2px var(--admin-glow);
+        }
+
+        /* Two-Column Grid for Product Breakdown & Overview */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Table Styling */
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+        }
+
+        .shadcn-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .shadcn-table th {
+            background: var(--card-elevated);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .shadcn-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .shadcn-table tbody tr {
+            transition: background 0.12s ease;
+        }
+
+        .shadcn-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .shadcn-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        /* Pagination */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-info {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            padding: 0 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--card-elevated);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .page-link:hover {
+            border-color: var(--border-hover);
+            background: var(--border);
+        }
+
+        .page-link.active {
+            background: var(--admin-primary);
+            color: #ffffff;
+            border-color: var(--admin-primary);
+            font-weight: 600;
+        }
+
+        .page-link.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body class="theme-admin">
+
+    <!-- Top Navigation Header -->
+    <header class="top-navbar">
+        <div class="nav-inner">
+            <div style="display: flex; align-items: center; gap: 24px;">
+                <a href="{% url 'admin_dashboard' %}" class="brand-container">
+                    <div class="brand-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="4" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg>
+                    </div>
+                    <div class="brand-titles">
+                        <h1>Advance Billing</h1>
+                        <span>Admin Control Center</span>
+                    </div>
+                </a>
+
+                <!-- Nav Menu Links -->
+                <nav class="nav-links">
+                    <a href="{% url 'admin_dashboard' %}" class="nav-link-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_products' %}" class="nav-link-item">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        <span>Product Management</span>
+                    </a>
+                    <a href="{% url 'admin_reports' %}" class="nav-link-item active">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        <span>Reports</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="nav-actions">
+                <button type="button" id="theme-toggle-btn" class="btn-shadcn btn-outline" onclick="App.toggleTheme()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span>Theme</span>
+                </button>
+                <div class="shadcn-badge badge-live">
+                    <span class="pulse-dot"></span>
+                    <span>ADMIN REPORTS</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Viewport -->
+    <main class="dashboard-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="header-left">
+                <h1>Sales &amp; Analytics Reports</h1>
+                <p>Audited database analytics, invoice billing velocity, and product-level sales performance.</p>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <a href="{% url 'admin_reports_pdf' %}?preset={{ preset }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="btn-shadcn btn-primary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Download PDF Report</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter Bar Card -->
+        <div class="filter-card">
+            <div class="filter-row">
+                <!-- Preset Filters -->
+                <div class="preset-pills">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-right: 4px;">Period:</span>
+                    <a href="?preset=all{% if search %}&search={{ search }}{% endif %}" class="preset-pill {% if preset == 'all' %}active{% endif %}">All Time</a>
+                    <a href="?preset=today{% if search %}&search={{ search }}{% endif %}" class="preset-pill {% if preset == 'today' %}active{% endif %}">Today</a>
+                    <a href="?preset=week{% if search %}&search={{ search }}{% endif %}" class="preset-pill {% if preset == 'week' %}active{% endif %}">This Week</a>
+                    <a href="?preset=month{% if search %}&search={{ search }}{% endif %}" class="preset-pill {% if preset == 'month' %}active{% endif %}">This Month</a>
+                </div>
+
+                <!-- Active Filter Scope Indicator -->
+                <div>
+                    <span class="shadcn-badge" style="background: rgba(16, 185, 129, 0.1); color: var(--admin-accent); border-color: rgba(16, 185, 129, 0.25);">
+                        Scope: {{ active_filter_label }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Custom Date Range & Search Form -->
+            <form method="GET" action="{% url 'admin_reports' %}" class="filter-row" style="margin-top: 4px;">
+                <input type="hidden" name="preset" value="custom">
+
+                <div class="custom-filter-form">
+                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Custom Range:</span>
+                    <input type="date" name="start_date" class="date-input" value="{{ start_date }}" placeholder="Start Date">
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">to</span>
+                    <input type="date" name="end_date" class="date-input" value="{{ end_date }}" placeholder="End Date">
+                    <button type="submit" class="btn-shadcn btn-secondary btn-sm">Apply Dates</button>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end;">
+                    <div class="search-box">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" name="search" class="form-input" placeholder="Search by Invoice # or Customer..." value="{{ search }}">
+                    </div>
+                    <button type="submit" class="btn-shadcn btn-secondary btn-sm">Search</button>
+                    {% if preset != 'all' or start_date or end_date or search %}
+                        <a href="{% url 'admin_reports' %}" class="btn-shadcn btn-outline btn-sm">Reset</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- 4 Metric Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">Total Invoices</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+                    </div>
+                </div>
+                <div class="metric-number">{{ total_invoices|default:"0" }}</div>
+                <div class="metric-foot">
+                    <span>Invoices generated in scope</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">Total Revenue</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                </div>
+                <div class="metric-number" style="color: var(--admin-accent);">₹ {{ total_sales|floatformat:2 }}</div>
+                <div class="metric-foot" style="color: var(--admin-accent);">
+                    <span>Gross transaction value</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">Total Units Sold</span>
+                    <div class="metric-icon" style="color: #60a5fa;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                    </div>
+                </div>
+                <div class="metric-number" style="color: #60a5fa;">{{ total_units_sold|default:"0" }}</div>
+                <div class="metric-foot">
+                    <span>Products dispensed via POS</span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">Average Invoice Value</span>
+                    <div class="metric-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </div>
+                </div>
+                <div class="metric-number">₹ {{ avg_invoice_value|floatformat:2 }}</div>
+                <div class="metric-foot">
+                    <span>Average spend per customer</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product-Wise Sales Performance Section -->
+        <div class="shadcn-card">
+            <div class="card-header-styled">
+                <div>
+                    <h3>Top Selling Products Performance</h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Aggregated product demand and gross revenue for the selected scope.</p>
+                </div>
+                <span class="shadcn-badge" style="color: var(--admin-accent);">Catalog Insights</span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="shadcn-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th style="text-align: right;">Units Sold</th>
+                            <th style="text-align: right;">Total Revenue (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in product_sales %}
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">{{ forloop.counter }}</td>
+                            <td style="font-weight: 600;">{{ item.product__name }}</td>
+                            <td>
+                                <span class="shadcn-badge" style="font-size: 0.7rem; border-radius: 4px;">{{ item.product__category }}</span>
+                            </td>
+                            <td style="text-align: right; font-weight: 600;">{{ item.units_sold }}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--admin-accent);">₹ {{ item.total_revenue|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <p>No product sales recorded in the selected period.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detailed Invoice Logs Section -->
+        <div class="shadcn-card">
+            <div class="card-header-styled">
+                <div>
+                    <h3>Invoice Ledger Breakdown</h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Comprehensive chronological log of audited customer invoices.</p>
+                </div>
+                <span style="font-size: 0.82rem; color: var(--text-muted);">
+                    Showing <strong>{{ invoices.start_index|default:0 }}-{{ invoices.end_index|default:0 }}</strong> of <strong>{{ total_invoices }}</strong> invoices
+                </span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="shadcn-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Invoice #</th>
+                            <th>Customer Name &amp; Phone</th>
+                            <th>Invoice Date &amp; Time</th>
+                            <th>Items Count</th>
+                            <th>Total Amount (₹)</th>
+                            <th>Payment Status</th>
+                            <th style="text-align: right; width: 120px;">PDF Export</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td>
+                                <span class="shadcn-badge" style="font-weight: 700; color: var(--text-primary);">
+                                    {{ invoice.invoice_number|default:invoice.id }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <span style="font-weight: 600;">{{ invoice.customer.name }}</span>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted);">{{ invoice.customer.phone|default:"No Phone" }}</span>
+                                </div>
+                            </td>
+                            <td style="font-size: 0.8rem; color: var(--text-muted);">
+                                {{ invoice.created_at|date:"M d, Y &bull; h:i A" }}
+                            </td>
+                            <td>
+                                <span class="shadcn-badge" style="font-size: 0.72rem;">
+                                    {{ invoice.items.count }} item{{ invoice.items.count|pluralize }}
+                                </span>
+                            </td>
+                            <td style="font-weight: 700; color: var(--admin-accent);">
+                                ₹ {{ invoice.total_amount|floatformat:2 }}
+                            </td>
+                            <td>
+                                <span class="shadcn-badge badge-live">
+                                    <span class="pulse-dot"></span>
+                                    <span>Paid</span>
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn-shadcn btn-secondary btn-sm" title="Download Invoice PDF">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <span>PDF</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/></svg>
+                                    <p>No invoices found matching the selected filter criteria.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            {% if invoices.has_other_pages %}
+            <div class="pagination-container">
+                <span class="pagination-info">
+                    Page <strong>{{ invoices.number }}</strong> of <strong>{{ invoices.paginator.num_pages }}</strong>
+                </span>
+
+                <div class="pagination-nav">
+                    {% if invoices.has_previous %}
+                        <a href="?page={{ invoices.previous_page_number }}&preset={{ preset }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="page-link">&laquo; Prev</a>
+                    {% else %}
+                        <span class="page-link disabled">&laquo; Prev</span>
+                    {% endif %}
+
+                    {% for num in invoices.paginator.page_range %}
+                        {% if invoices.number == num %}
+                            <span class="page-link active">{{ num }}</span>
+                        {% elif num > invoices.number|add:'-3' and num < invoices.number|add:'3' %}
+                            <a href="?page={{ num }}&preset={{ preset }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="page-link">{{ num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if invoices.has_next %}
+                        <a href="?page={{ invoices.next_page_number }}&preset={{ preset }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}" class="page-link">Next &raquo;</a>
+                    {% else %}
+                        <span class="page-link disabled">Next &raquo;</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </main>
+
+    <!-- App JS Script -->
+    <script src="{% static 'assets/js/app.js' %}"></script>
+</body>
+
+</html>

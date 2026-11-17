@@ -2,7 +2,7 @@ import io
 import base64
 import random
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -11,7 +11,7 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum, Count, Avg
 from django.core.paginator import Paginator
 import qrcode
 from xhtml2pdf import pisa
@@ -704,6 +704,213 @@ def admin_products(request):
     except Exception as e:
         messages.error(request, f"Error loading products: {str(e)}")
         return redirect('admin_dashboard')
+
+
+def get_filtered_report_data(request):
+    """
+    Helper function to filter invoices and compute report metrics based on preset or custom date range.
+    Supported presets: 'all', 'today', 'week', 'month', 'custom'.
+    """
+    preset = request.GET.get('preset', 'all').strip().lower()
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+    search = request.GET.get('search', '').strip()
+
+    now = timezone.now()
+    start_dt = None
+    end_dt = None
+    active_filter_label = "All Time"
+
+    if preset == 'today':
+        start_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_dt = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        active_filter_label = "Today"
+    elif preset == 'week':
+        start_dt = now - timedelta(days=7)
+        end_dt = now
+        active_filter_label = "Last 7 Days"
+    elif preset == 'month':
+        start_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_dt = now
+        active_filter_label = "This Month"
+    elif preset == 'custom' or (start_date_str and end_date_str):
+        preset = 'custom'
+        try:
+            if start_date_str:
+                d_start = datetime.strptime(start_date_str, '%Y-%m-%d')
+                start_dt = timezone.make_aware(d_start.replace(hour=0, minute=0, second=0))
+            if end_date_str:
+                d_end = datetime.strptime(end_date_str, '%Y-%m-%d')
+                end_dt = timezone.make_aware(d_end.replace(hour=23, minute=59, second=59, microsecond=999999))
+            active_filter_label = f"{start_date_str} to {end_date_str}"
+        except (ValueError, TypeError):
+            preset = 'all'
+            start_dt = None
+            end_dt = None
+            active_filter_label = "All Time"
+    else:
+        preset = 'all'
+
+    qs = Invoice.objects.all().select_related('customer').prefetch_related('items__product').order_by('-id')
+
+    if start_dt:
+        qs = qs.filter(created_at__gte=start_dt)
+    if end_dt:
+        qs = qs.filter(created_at__lte=end_dt)
+
+    if search:
+        qs = qs.filter(
+            Q(invoice_number__icontains=search) |
+            Q(customer__name__icontains=search) |
+            Q(customer__phone__icontains=search)
+        )
+
+    # Calculate aggregate metrics directly from database
+    total_invoices = qs.count()
+    sales_agg = qs.aggregate(total_sales=Sum('total_amount'))
+    total_sales = sales_agg['total_sales'] or Decimal('0.00')
+
+    # Total units sold across all invoice items in filtered invoices
+    units_agg = InvoiceItem.objects.filter(invoice__in=qs).aggregate(total_units=Sum('quantity'))
+    total_units_sold = units_agg['total_units'] or 0
+
+    total_products = Product.objects.count()
+    avg_invoice_val = (total_sales / total_invoices) if total_invoices > 0 else Decimal('0.00')
+
+    # Product-wise sales performance
+    product_sales = list(InvoiceItem.objects.filter(invoice__in=qs).values(
+        'product__id',
+        'product__name',
+        'product__category'
+    ).annotate(
+        units_sold=Sum('quantity'),
+        total_revenue=Sum('total_price')
+    ).order_by('-total_revenue')[:10])
+
+    return {
+        'qs': qs,
+        'total_invoices': total_invoices,
+        'total_sales': total_sales,
+        'total_units_sold': total_units_sold,
+        'total_products': total_products,
+        'avg_invoice_val': avg_invoice_val,
+        'product_sales': product_sales,
+        'preset': preset,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'search': search,
+        'active_filter_label': active_filter_label,
+    }
+
+
+def admin_reports(request):
+    """
+    Dedicated Reports and Analytics dashboard inside Admin Dashboard.
+    Supports real-time metrics, date filtering (Today, Week, Month, Custom),
+    product-wise sales performance, and paginated invoice logs.
+    Restricted strictly to Administrator users.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='admin')
+            except User.DoesNotExist:
+                user = None
+
+        if not user and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'admin':
+            user = request.user
+
+        if not user:
+            messages.error(request, "Access restricted to Administrators only..!")
+            return redirect('admin_login')
+
+        data = get_filtered_report_data(request)
+
+        # Pagination for invoice report table
+        paginator = Paginator(data['qs'], 10)
+        page_number = request.GET.get('page', 1)
+        invoices = paginator.get_page(page_number)
+
+        context = {
+            'user': user,
+            'invoices': invoices,
+            'total_invoices': data['total_invoices'],
+            'total_sales': data['total_sales'],
+            'total_units_sold': data['total_units_sold'],
+            'total_products': data['total_products'],
+            'avg_invoice_value': data['avg_invoice_val'],
+            'product_sales': data['product_sales'],
+            'preset': data['preset'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'search': data['search'],
+            'active_filter_label': data['active_filter_label'],
+            'generated_at': timezone.now(),
+        }
+        return render(request, 'billing/admin-reports.html', context)
+    except Exception as e:
+        messages.error(request, f"Error generating reports: {str(e)}")
+        return redirect('admin_dashboard')
+
+
+def admin_reports_pdf(request):
+    """
+    Generate and download professional PDF export of the filtered sales reports.
+    Reuses project PDF engine (pisa / xhtml2pdf).
+    Restricted strictly to Administrator users.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='admin')
+            except User.DoesNotExist:
+                user = None
+
+        if not user and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'admin':
+            user = request.user
+
+        if not user:
+            messages.error(request, "Access restricted to Administrators only..!")
+            return redirect('admin_login')
+
+        data = get_filtered_report_data(request)
+
+        context = {
+            'admin': user,
+            'invoices': data['qs'][:100],  # Limit to 100 in printable PDF to prevent excessive page counts
+            'total_invoices': data['total_invoices'],
+            'total_sales': data['total_sales'],
+            'total_units_sold': data['total_units_sold'],
+            'total_products': data['total_products'],
+            'avg_invoice_value': data['avg_invoice_val'],
+            'product_sales': data['product_sales'],
+            'active_filter_label': data['active_filter_label'],
+            'generated_at': timezone.now(),
+        }
+
+        html_content = render_to_string('billing/reports_pdf.html', context)
+        buffer = io.BytesIO()
+        pdf_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
+
+        if pdf_status.err:
+            return HttpResponse('Error generating Reports PDF', status=500)
+
+        pdf_data = buffer.getvalue()
+        buffer.close()
+
+        timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"Admin_Sales_Report_{data['preset']}_{timestamp_str}.pdf"
+
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    except Exception as e:
+        messages.error(request, f"Error generating PDF report: {str(e)}")
+        return redirect('admin_reports')
 
 
 @csrf_exempt
