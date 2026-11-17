@@ -1,4 +1,8 @@
-# Python bytecode and cache
+# ==============================================================================
+# Advance Billing System - Git Ignore Configuration
+# ==============================================================================
+
+# Python bytecode, compilation, and runtime cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,6 +33,7 @@ ENV/
 env/
 env.bak/
 venv.bak/
+.env/
 
 # Django local database & static/media storage
 *.sqlite3
@@ -41,13 +46,19 @@ staticfiles/
 /staticfiles/
 static_root/
 
-# Environment variables & secrets
+# Environment variables & sensitive credentials
 .env
 .env.*
 !.env.example
 
-# Logs and runtime files
+# Logs, temporary, and runtime files
 *.log
+*.tmp
+*.bak
+*.orig
+*.swp
+*.swo
+*~
 local_settings.py
 celerybeat-schedule
 celerybeat.pid
@@ -66,21 +77,24 @@ coverage.xml
 .pytest_cache/
 htmlcov/
 
-# IDE and Editor configurations
+# IDE, Editor, and AI Workspace configurations
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
-*.swp
-*.swo
-*~
+.gemini/
+.claude/
+.copilot/
 
-# Operating System files
+# Operating System files & Desktop artifacts
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+ehthumbs_vista.db
 Thumbs.db
+Thumbs.db:encryptable
 [Dd]esktop.ini
+$RECYCLE.BIN/

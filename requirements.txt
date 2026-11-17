@@ -1,18 +1,26 @@
-# Django Web Framework & REST Framework
+# ==============================================================================
+# Advance Billing System with QR - Production & Development Requirements
+# ==============================================================================
+
+# Core Django Framework & REST API Architecture
 Django>=5.0,<7.0
 djangorestframework>=3.14.0
 asgiref>=3.8.0
 sqlparse>=0.5.0
 tzdata>=2024.1; sys_platform == 'win32'
 
-# Authentication, Password Recovery & Security
-# Utilizes Django built-in cryptographic signing (TimestampSigner), PBKDF2 hashing, and auth password validators
+# Cryptography, Authentication & Security
+# Built-in Django PBKDF2 SHA-256 hashing, TimestampSigner recovery tokens, and validators
+cryptography>=42.0.0
 
-# QR Code Generation (requires Pillow for image export)
+# Dynamic QR Code Generation (with PIL image rasterizer)
 qrcode[pil]>=8.0
 pillow>=10.0.0
 
-# PDF Invoice Generation & Export
+# PDF Invoice Generation, Layout & Document Stream Export
 xhtml2pdf>=0.2.23
 reportlab>=4.0.0
 pypdf>=5.0.0
+svglib>=1.5.0
+html5lib>=1.1
+lxml>=5.0.0
