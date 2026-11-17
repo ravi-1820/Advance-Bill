@@ -445,6 +445,175 @@
             color: var(--text-primary);
             font-weight: 600;
         }
+
+        /* Modal Overlays & Admin Registration Dialog */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: fadeIn 0.15s ease-out;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-dialog {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.15s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(12px) scale(0.98); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--text-primary);
+            background: var(--card-elevated);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            background: var(--card-elevated);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input {
+            width: 100%;
+            height: 38px;
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0 12px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .form-group input:focus {
+            border-color: var(--admin-primary);
+            box-shadow: 0 0 0 2px var(--admin-glow);
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.85rem;
+        }
+
+        .error-message {
+            font-size: 0.75rem;
+            color: #ef4444;
+            display: none;
+        }
+
+        .alert-banner {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-error {
+            display: flex;
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .alert-success {
+            display: flex;
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
@@ -511,7 +680,7 @@
                         </svg>
                     </div>
                     <div class="user-meta">
-                        <h2 id="admin-name">{{ request.user.name|default:user.name|default:request.user.email }}</h2>
+                        <h2 id="admin-name">{{ user.name|default:user.email|default:"Administrator" }}</h2>
                         <p>Master Administrator &bull; Role: <strong style="color: var(--admin-accent);">Admin Superuser</strong></p>
                     </div>
                 </div>
@@ -674,7 +843,11 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                             <span>Manage Product Catalog</span>
                         </a>
-                        <a href="{% url 'logout' %}" class="btn-shadcn btn-secondary" style="width: 100%;">
+                        <button type="button" class="btn-shadcn btn-secondary" style="width: 100%;" onclick="AdminRegistrationManager.openModal()">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                            <span>Register New Admin</span>
+                        </button>
+                        <a href="{% url 'logout' %}" class="btn-shadcn btn-outline" style="width: 100%;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             <span>Sign Out Admin</span>
                         </a>
@@ -693,11 +866,11 @@
                     <div class="status-box">
                         <div class="status-box-row">
                             <span>Admin Name</span>
-                            <span>{{ request.user.name|default:user.name|default:"Administrator" }}</span>
+                            <span>{{ user.name|default:"Administrator" }}</span>
                         </div>
                         <div class="status-box-row">
                             <span>Email</span>
-                            <span>{{ request.user.email }}</span>
+                            <span>{{ user.email }}</span>
                         </div>
                         <div class="status-box-row">
                             <span>Role</span>
@@ -715,8 +888,221 @@
 
     </main>
 
-    <!-- App JS Script -->
+    <!-- Admin Registration Modal -->
+    <div class="modal-overlay" id="adminRegisterModal" role="dialog" aria-modal="true" aria-labelledby="adminRegisterTitle">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="adminRegisterTitle">Register New Administrator</h3>
+                <button type="button" class="modal-close-btn" onclick="AdminRegistrationManager.closeModal()" aria-label="Close modal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <form id="adminRegisterForm" onsubmit="AdminRegistrationManager.handleSubmit(event)" novalidate>
+                <div class="modal-body">
+                    <div class="alert-banner" id="adminRegAlert">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span id="adminRegAlertText"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adminRegName">Full Name <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="adminRegName" placeholder="e.g. Master Administrator" required autocomplete="off">
+                        <span class="error-message" id="err-reg-name">Full name is required.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adminRegEmail">Email Address <span style="color: #ef4444;">*</span></label>
+                        <input type="email" id="adminRegEmail" placeholder="admin@enterprise.com" required autocomplete="off">
+                        <span class="error-message" id="err-reg-email">Valid email address is required.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adminRegPhone">Phone Number (Optional)</label>
+                        <input type="tel" id="adminRegPhone" placeholder="10-digit mobile number" maxlength="20" autocomplete="off">
+                        <span class="error-message" id="err-reg-phone">Phone number must contain at least 10 digits.</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="adminRegPassword">Password <span style="color: #ef4444;">*</span></label>
+                            <input type="password" id="adminRegPassword" placeholder="Min. 8 characters" required>
+                            <span class="error-message" id="err-reg-password">Password is required.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="adminRegConfirmPassword">Confirm Password <span style="color: #ef4444;">*</span></label>
+                            <input type="password" id="adminRegConfirmPassword" placeholder="Re-enter password" required>
+                            <span class="error-message" id="err-reg-confirm">Passwords must match.</span>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                        <strong>Security Note:</strong> New accounts created here receive full <em>Admin Superuser</em> permissions. Passwords are cryptographically hashed using PBKDF2 SHA-256.
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-shadcn btn-secondary" onclick="AdminRegistrationManager.closeModal()">Cancel</button>
+                    <button type="submit" class="btn-shadcn btn-primary" id="adminRegSubmitBtn">
+                        <span class="spinner" id="adminRegSpinner" style="display: none;"></span>
+                        <span id="adminRegSubmitText">Create Admin Account</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- App JS Script & Admin Registration Controller -->
     <script src="{% static 'assets/js/app.js' %}"></script>
+    <script>
+        const AdminRegistrationManager = {
+            csrfToken: '{{ csrf_token }}',
+
+            getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue || this.csrfToken;
+            },
+
+            openModal() {
+                this.resetForm();
+                const modal = document.getElementById('adminRegisterModal');
+                if (modal) modal.classList.add('active');
+                setTimeout(() => document.getElementById('adminRegName').focus(), 100);
+            },
+
+            closeModal() {
+                const modal = document.getElementById('adminRegisterModal');
+                if (modal) modal.classList.remove('active');
+                this.resetForm();
+            },
+
+            resetForm() {
+                const form = document.getElementById('adminRegisterForm');
+                if (form) form.reset();
+                document.querySelectorAll('#adminRegisterModal .error-message').forEach(el => el.style.display = 'none');
+                const alertEl = document.getElementById('adminRegAlert');
+                if (alertEl) alertEl.className = 'alert-banner';
+            },
+
+            async handleSubmit(event) {
+                event.preventDefault();
+                document.querySelectorAll('#adminRegisterModal .error-message').forEach(el => el.style.display = 'none');
+                const alertEl = document.getElementById('adminRegAlert');
+                alertEl.className = 'alert-banner';
+
+                const name = document.getElementById('adminRegName').value.trim();
+                const email = document.getElementById('adminRegEmail').value.trim();
+                const phone = document.getElementById('adminRegPhone').value.trim();
+                const password = document.getElementById('adminRegPassword').value;
+                const confirmPassword = document.getElementById('adminRegConfirmPassword').value;
+
+                let hasError = false;
+                if (!name) {
+                    document.getElementById('err-reg-name').style.display = 'block';
+                    hasError = true;
+                }
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email || !emailPattern.test(email)) {
+                    document.getElementById('err-reg-email').style.display = 'block';
+                    hasError = true;
+                }
+                if (phone && phone.replace(/\D/g, '').length < 10) {
+                    document.getElementById('err-reg-phone').style.display = 'block';
+                    hasError = true;
+                }
+                if (!password) {
+                    document.getElementById('err-reg-password').style.display = 'block';
+                    hasError = true;
+                }
+                if (password !== confirmPassword) {
+                    document.getElementById('err-reg-confirm').textContent = 'Passwords do not match.';
+                    document.getElementById('err-reg-confirm').style.display = 'block';
+                    hasError = true;
+                }
+
+                if (hasError) return;
+
+                const submitBtn = document.getElementById('adminRegSubmitBtn');
+                const spinner = document.getElementById('adminRegSpinner');
+                const submitText = document.getElementById('adminRegSubmitText');
+                submitBtn.disabled = true;
+                spinner.style.display = 'inline-block';
+                submitText.textContent = 'Registering Admin...';
+
+                try {
+                    const res = await fetch('/api/register/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCookie('csrftoken'),
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            password: password,
+                            password_confirm: confirmPassword,
+                            usertype: 'admin'
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.success) {
+                        alertEl.className = 'alert-banner alert-success';
+                        document.getElementById('adminRegAlertText').textContent = data.message || 'Admin registered successfully!';
+                        setTimeout(() => {
+                            AdminRegistrationManager.closeModal();
+                            window.location.reload();
+                        }, 1200);
+                    } else {
+                        alertEl.className = 'alert-banner alert-error';
+                        document.getElementById('adminRegAlertText').textContent = data.message || 'Registration failed.';
+                        if (data.errors) {
+                            if (data.errors.email) {
+                                const el = document.getElementById('err-reg-email');
+                                el.textContent = Array.isArray(data.errors.email) ? data.errors.email[0] : data.errors.email;
+                                el.style.display = 'block';
+                            }
+                            if (data.errors.password) {
+                                const el = document.getElementById('err-reg-password');
+                                el.textContent = Array.isArray(data.errors.password) ? data.errors.password[0] : data.errors.password;
+                                el.style.display = 'block';
+                            }
+                            if (data.errors.password_confirm) {
+                                const el = document.getElementById('err-reg-confirm');
+                                el.textContent = Array.isArray(data.errors.password_confirm) ? data.errors.password_confirm[0] : data.errors.password_confirm;
+                                el.style.display = 'block';
+                            }
+                        }
+                    }
+                } catch (err) {
+                    alertEl.className = 'alert-banner alert-error';
+                    document.getElementById('adminRegAlertText').textContent = 'Network communication error.';
+                } finally {
+                    submitBtn.disabled = false;
+                    spinner.style.display = 'none';
+                    submitText.textContent = 'Create Admin Account';
+                }
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') AdminRegistrationManager.closeModal();
+        });
+    </script>
 </body>
 
 </html>

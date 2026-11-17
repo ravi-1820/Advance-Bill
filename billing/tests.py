@@ -1792,6 +1792,415 @@ class ProductManagementFrontendAndAPITest(TestCase):
         self.assertTrue(Product.objects.filter(id=self.product2.id).exists())
 
 
+class AdminRegistrationAndProductValidationModuleTest(TestCase):
+    """
+    Task 2: Complete Functional, Validation, Security and Regression Test Suite
+    Module 1: Admin User Registration
+    Module 2: Product Management
+    Regression: Existing Authentication and Billing Workflows
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(
+            email="super.admin@enterprise.com",
+            password="AdminComplexPass2026!",
+            name="Super Admin",
+            usertype="admin"
+        )
+        self.distributor = User.objects.create_user(
+            email="pos.distributor@enterprise.com",
+            password="DistributorPass2026!",
+            name="POS Distributor",
+            usertype="distributor"
+        )
+        self.product = Product.objects.create(
+            name="Omni Thermal Barcode Scanner",
+            category="POS Peripherals",
+            price=3200.00,
+            stock=25,
+            gst_rate=18.00
+        )
+        self.customer = Customer.objects.create(
+            name="Metro Retail Hub",
+            email="metro@retailhub.com",
+            phone="9876501234",
+            address="789 Market Road"
+        )
+
+    # =========================================================================
+    # MODULE 1: ADMIN USER REGISTRATION VALIDATION & TESTING
+    # =========================================================================
+
+    def test_admin_registration_unauthorized_anonymous(self):
+        """Anonymous requests to /api/register/ must return 401 Unauthorized."""
+        payload = {
+            "name": "New Admin",
+            "email": "new.admin@enterprise.com",
+            "password": "SecurePassword123!",
+            "password_confirm": "SecurePassword123!",
+            "usertype": "admin"
+        }
+        resp = self.client.post(
+            reverse('api_register'),
+            payload,
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_registration_unauthorized_distributor(self):
+        """Distributor (non-admin) requests must return 403 Forbidden."""
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        payload = {
+            "name": "Intruder Admin",
+            "email": "intruder.admin@enterprise.com",
+            "password": "SecurePassword123!",
+            "password_confirm": "SecurePassword123!",
+            "usertype": "admin"
+        }
+        resp = self.client.post(
+            reverse('api_register'),
+            payload,
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_admin_registration_successful(self):
+        """Authenticated Admin can successfully register a new Admin user."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        payload = {
+            "name": "Operations Admin",
+            "email": "ops.admin@enterprise.com",
+            "phone": "9811223344",
+            "password": "StrongAdminPassword2026!",
+            "password_confirm": "StrongAdminPassword2026!",
+            "usertype": "admin"
+        }
+        resp = self.client.post(
+            reverse('api_register'),
+            payload,
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['data']['usertype'], 'admin')
+        self.assertEqual(data['data']['email'], 'ops.admin@enterprise.com')
+
+        # Verify password is NEVER exposed in response
+        self.assertNotIn('password', data['data'])
+        if 'user' in data:
+            self.assertNotIn('password', data['user'])
+
+        # Verify password is cryptographically hashed in DB
+        created_user = User.objects.get(email="ops.admin@enterprise.com")
+        self.assertEqual(created_user.usertype, 'admin')
+        self.assertTrue(created_user.check_password("StrongAdminPassword2026!"))
+        self.assertNotEqual(created_user.password, "StrongAdminPassword2026!")
+
+    def test_admin_registration_empty_payload(self):
+        """Empty form submission must fail with HTTP 400 and field error messages."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session.save()
+
+        resp = self.client.post(reverse('api_register'), {}, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertIn('email', data['errors'])
+        self.assertIn('password', data['errors'])
+        self.assertIn('password_confirm', data['errors'])
+
+    def test_admin_registration_invalid_email_format(self):
+        """Invalid email formats must be rejected with 400 Bad Request."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session.save()
+
+        bad_emails = ["not-an-email", "admin@", "admin@domain", "@nodomain.com"]
+        for bad_mail in bad_emails:
+            payload = {
+                "name": "Test Admin",
+                "email": bad_mail,
+                "password": "ValidPassword123!",
+                "password_confirm": "ValidPassword123!",
+                "usertype": "admin"
+            }
+            resp = self.client.post(reverse('api_register'), payload, content_type='application/json')
+            self.assertEqual(resp.status_code, 400, f"Failed to reject invalid email: {bad_mail}")
+            self.assertIn('email', resp.json()['errors'])
+
+    def test_admin_registration_duplicate_email(self):
+        """Registering an email that already exists must fail with clear error."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session.save()
+
+        payload = {
+            "name": "Duplicate Admin",
+            "email": self.admin.email,  # already exists
+            "password": "ValidPassword123!",
+            "password_confirm": "ValidPassword123!",
+            "usertype": "admin"
+        }
+        resp = self.client.post(reverse('api_register'), payload, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("already exists", str(resp.json()['errors']['email']))
+
+    def test_admin_registration_password_mismatch(self):
+        """Mismatched password and confirm password must fail validation."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session.save()
+
+        payload = {
+            "name": "Test Admin",
+            "email": "unique.mismatch@enterprise.com",
+            "password": "PasswordAlpha123!",
+            "password_confirm": "PasswordBeta456!",
+            "usertype": "admin"
+        }
+        resp = self.client.post(reverse('api_register'), payload, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('password_confirm', resp.json()['errors'])
+
+    def test_admin_registration_weak_password_validation(self):
+        """Weak passwords must be rejected by Django password validators."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session.save()
+
+        payload = {
+            "name": "Weak Admin",
+            "email": "weak.password@enterprise.com",
+            "password": "123",
+            "password_confirm": "123",
+            "usertype": "admin"
+        }
+        resp = self.client.post(reverse('api_register'), payload, content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('password', resp.json()['errors'])
+
+    def test_admin_registration_frontend_dashboard_modal_rendered(self):
+        """Admin Dashboard must render registration modal and button for authenticated Admin."""
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Register New Admin")
+        self.assertContains(resp, "adminRegisterModal")
+        self.assertContains(resp, "adminRegEmail")
+        self.assertContains(resp, "adminRegPassword")
+
+    # =========================================================================
+    # MODULE 2: PRODUCT MANAGEMENT VALIDATION & TESTING
+    # =========================================================================
+
+    def test_product_add_valid_data(self):
+        """Add product with valid data through REST API."""
+        payload = {
+            "name": "Thermal Receipt Printer Roll 80mm",
+            "category": "Paper & Stationary",
+            "price": "95.50",
+            "stock": 100,
+            "gst_rate": "18.00"
+        }
+        resp = self.client.post(reverse('api_products'), payload, content_type='application/json')
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['data']['name'], "Thermal Receipt Printer Roll 80mm")
+        self.assertEqual(float(data['data']['price']), 95.50)
+        self.assertEqual(data['data']['stock'], 100)
+        self.assertEqual(float(data['data']['gst_rate']), 18.00)
+
+    def test_product_add_missing_and_invalid_data(self):
+        """Reject products with missing fields, negative price, negative stock, invalid GST."""
+        # 1. Missing name
+        r1 = self.client.post(reverse('api_products'), {
+            "name": "", "category": "Hardware", "price": "100.00", "stock": 5, "gst_rate": "18.00"
+        }, content_type='application/json')
+        self.assertEqual(r1.status_code, 400)
+
+        # 2. Price <= 0
+        r2 = self.client.post(reverse('api_products'), {
+            "name": "Free Item", "category": "Hardware", "price": "0.00", "stock": 5, "gst_rate": "18.00"
+        }, content_type='application/json')
+        self.assertEqual(r2.status_code, 400)
+
+        # 3. Negative stock
+        r3 = self.client.post(reverse('api_products'), {
+            "name": "Negative Stock", "category": "Hardware", "price": "50.00", "stock": -5, "gst_rate": "18.00"
+        }, content_type='application/json')
+        self.assertEqual(r3.status_code, 400)
+
+        # 4. GST rate > 100
+        r4 = self.client.post(reverse('api_products'), {
+            "name": "Crazy GST", "category": "Hardware", "price": "50.00", "stock": 10, "gst_rate": "120.00"
+        }, content_type='application/json')
+        self.assertEqual(r4.status_code, 400)
+
+    def test_product_edit_update_existing(self):
+        """Update existing product details via REST API."""
+        update_data = {
+            "name": "Omni Thermal Barcode Scanner (v2 Pro)",
+            "category": "High-Speed POS Peripherals",
+            "price": "3600.00",
+            "stock": 40,
+            "gst_rate": "18.00"
+        }
+        resp = self.client.put(
+            reverse('api_product_detail', kwargs={'id': self.product.id}),
+            update_data,
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.name, "Omni Thermal Barcode Scanner (v2 Pro)")
+        self.assertEqual(float(self.product.price), 3600.00)
+        self.assertEqual(self.product.stock, 40)
+
+    def test_product_delete_standalone(self):
+        """Delete standalone product not linked to any invoice."""
+        temp_prod = Product.objects.create(
+            name="Temporary Discontinued Cable",
+            category="Cables",
+            price=150.00,
+            stock=5,
+            gst_rate=18.00
+        )
+        resp = self.client.delete(reverse('api_product_detail', kwargs={'id': temp_prod.id}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Product.objects.filter(id=temp_prod.id).exists())
+
+    def test_product_delete_blocked_when_used_in_invoice(self):
+        """Protect historical records: Delete must be rejected if referenced in InvoiceItem."""
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-PROTECT-101",
+            total_amount=3200.00
+        )
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            quantity=1,
+            unit_price=3200.00,
+            total_price=3200.00
+        )
+
+        resp = self.client.delete(reverse('api_product_detail', kwargs={'id': self.product.id}))
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("historical invoice records", resp.json()['message'])
+        # Ensure product was not deleted
+        self.assertTrue(Product.objects.filter(id=self.product.id).exists())
+
+    def test_product_search_and_pagination(self):
+        """Search products and check paginated output."""
+        # Create 15 products to trigger pagination
+        for i in range(15):
+            Product.objects.create(
+                name=f"Bulk Gadget #{i:02d}",
+                category="Gadgets",
+                price=100.00 + i,
+                stock=10 + i,
+                gst_rate=18.00
+            )
+
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        # Page 1
+        resp_p1 = self.client.get(reverse('admin_products'), {'page': 1})
+        self.assertEqual(resp_p1.status_code, 200)
+        self.assertTrue(resp_p1.context['products'].has_next())
+
+        # Page 2
+        resp_p2 = self.client.get(reverse('admin_products'), {'page': 2})
+        self.assertEqual(resp_p2.status_code, 200)
+
+        # Search query
+        resp_search = self.client.get(reverse('admin_products'), {'search': 'Gadget #05'})
+        self.assertEqual(resp_search.status_code, 200)
+        self.assertContains(resp_search, "Bulk Gadget #05")
+
+    def test_product_unauthorized_admin_page_access(self):
+        """Non-admin and anonymous requests to /admin-products/ must be redirected."""
+        # Anonymous
+        r_anon = self.client.get(reverse('admin_products'))
+        self.assertEqual(r_anon.status_code, 302)
+        self.assertIn('/admin-login/', r_anon.url)
+
+        # Distributor
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+        r_dist = self.client.get(reverse('admin_products'))
+        self.assertEqual(r_dist.status_code, 302)
+        self.assertIn('/admin-login/', r_dist.url)
+
+    # =========================================================================
+    # MODULE 3: REGRESSION TESTING (EXISTING BILLING & AUTH WORKFLOWS)
+    # =========================================================================
+
+    def test_regression_admin_login(self):
+        """Existing Admin Login workflow functions without issue."""
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'super.admin@enterprise.com',
+            'admin_password': 'AdminComplexPass2026!'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin-dashboard/', resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.admin.id)
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+
+    def test_regression_invoice_pdf_and_qr_generation(self):
+        """Existing Invoice PDF download and dynamic QR endpoints continue working seamlessly."""
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-REGRESS-202",
+            total_amount=3200.00
+        )
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            quantity=1,
+            unit_price=3200.00,
+            total_price=3200.00
+        )
+
+        # Authenticate as distributor or admin
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        # 1. Test Invoice QR Code
+        qr_resp = self.client.get(reverse('invoice_qr_code', kwargs={'id': invoice.id}))
+        self.assertEqual(qr_resp.status_code, 200)
+        self.assertEqual(qr_resp['Content-Type'], 'image/png')
+
+        # 2. Test Invoice PDF Export
+        pdf_resp = self.client.get(reverse('invoice_pdf', kwargs={'id': invoice.id}))
+        self.assertEqual(pdf_resp.status_code, 200)
+        self.assertEqual(pdf_resp['Content-Type'], 'application/pdf')
+
+
+
 
 
 
