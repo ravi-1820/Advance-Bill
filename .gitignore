@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -80,8 +81,10 @@ htmlcov/
 # IDE, Editor, and AI Workspace configurations
 .vscode/
 .idea/
+.history/
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
 .gemini/
 .claude/
 .copilot/
