@@ -56,7 +56,7 @@ def distributor_login(request):
 
             if user:
                 # Validate password
-                if user.password == password:
+                if user.check_password(password):
                     request.session['user_id'] = user.id
                     request.session['email'] = user.email
                     request.session['name'] = user.company_name or user.name
@@ -90,7 +90,7 @@ def admin_login(request):
                 pass
 
             if user:
-                if user.password == password:
+                if user.check_password(password):
                     request.session['user_id'] = user.id
                     request.session['email'] = user.email
                     request.session['name'] = user.name

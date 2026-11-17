@@ -1,7 +1,13 @@
 from django.urls import path
 from . import views
+from . import api_views
 
 urlpatterns = [
+    # REST API Endpoints
+    path('api/register/distributor/', api_views.DistributorRegistrationAPIView.as_view(), name='api_register_distributor'),
+    path('api/distributor/register/', api_views.DistributorRegistrationAPIView.as_view(), name='api_distributor_register_alt'),
+    path('api/register/', api_views.UserRegistrationAPIView.as_view(), name='api_register'),
+
     path('', views.index, name='index'),
     path('index/', views.index, name='index_alt'),
     path('distributor-login/', views.distributor_login, name='distributor_login'),

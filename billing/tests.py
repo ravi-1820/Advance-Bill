@@ -782,6 +782,189 @@ class InvoicePDFQREmbeddingTest(TestCase):
         self.assertIn('INV-ALPHA-101', response['Content-Disposition'])
 
 
+class DistributorRegistrationAPITest(TestCase):
+    def setUp(self):
+        self.endpoint = reverse('api_register_distributor')
+        self.valid_payload = {
+            "email": "distributor@example.com",
+            "password": "StrongPassword123!",
+            "password_confirm": "StrongPassword123!",
+            "name": "Test Distributor",
+            "phone": "9876543210",
+            "company_name": "ABC Distributors",
+            "usertype": "distributor"
+        }
+        # Pre-existing users for testing duplicates and existing login
+        self.existing_legacy_distributor = User.objects.create(
+            name="Legacy Distributor",
+            email="legacy.dist@example.com",
+            password="legacy_plain_password",
+            phone="9111111111",
+            distributor_id="DIST-11111",
+            company_name="Legacy Corp",
+            usertype="distributor"
+        )
+        self.existing_admin = User.objects.create(
+            name="Admin User",
+            email="admin@example.com",
+            password="admin_plain_password",
+            phone="9222222222",
+            company_name="Master Admin",
+            usertype="admin"
+        )
+
+    def test_valid_distributor_registration(self):
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        self.assertEqual(data.get('message'), "Distributor registered successfully.")
+        self.assertIn('data', data)
+        self.assertEqual(data['data']['email'], "distributor@example.com")
+        self.assertEqual(data['data']['name'], "Test Distributor")
+        self.assertEqual(data['data']['company_name'], "ABC Distributors")
+        self.assertEqual(data['data']['usertype'], "distributor")
+
+    def test_duplicate_email_registration(self):
+        self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn("already exists", data.get('message', '').lower())
+
+    def test_invalid_email_address(self):
+        payload = self.valid_payload.copy()
+        payload['email'] = "invalid-email-format"
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('email', data.get('errors', {}))
+
+    def test_missing_required_fields(self):
+        for required_field in ['email', 'password', 'password_confirm', 'name', 'phone', 'company_name']:
+            payload = self.valid_payload.copy()
+            del payload[required_field]
+            response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+            self.assertEqual(response.status_code, 400, f"Expected 400 when missing {required_field}")
+            data = response.json()
+            self.assertFalse(data.get('success'))
+            self.assertIn(required_field, data.get('errors', {}))
+
+    def test_password_and_confirmation_mismatch(self):
+        payload = self.valid_payload.copy()
+        payload['password_confirm'] = "DifferentPassword123!"
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('password_confirm', data.get('errors', {}))
+
+    def test_weak_password_validation(self):
+        payload = self.valid_payload.copy()
+        payload['password'] = "123"
+        payload['password_confirm'] = "123"
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('password', data.get('errors', {}))
+
+    def test_invalid_phone_number_according_to_existing_rules(self):
+        # Less than 10 digits
+        payload = self.valid_payload.copy()
+        payload['phone'] = "12345"
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('phone', data.get('errors', {}))
+
+        # Duplicate phone number
+        payload['phone'] = self.existing_legacy_distributor.phone
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data.get('success'))
+        self.assertIn('phone', data.get('errors', {}))
+
+    def test_distributor_role_assignment(self):
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(email="distributor@example.com")
+        self.assertEqual(user.usertype, "distributor")
+
+    def test_attempt_to_register_as_admin(self):
+        payload = self.valid_payload.copy()
+        payload['email'] = "attacker@example.com"
+        payload['phone'] = "9333333333"
+        payload['usertype'] = "admin"
+        response = self.client.post(self.endpoint, data=payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(email="attacker@example.com")
+        self.assertEqual(user.usertype, "distributor")
+        self.assertNotEqual(user.usertype, "admin")
+
+    def test_password_hashing_verification(self):
+        raw_password = "StrongPassword123!"
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(email="distributor@example.com")
+        self.assertNotEqual(user.password, raw_password)
+        self.assertTrue(user.password.startswith("pbkdf2_sha256$") or user.password.startswith("argon2") or user.password.startswith("bcrypt"))
+        self.assertTrue(user.check_password(raw_password))
+
+    def test_api_response_does_not_expose_passwords(self):
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        response_text = response.content.decode('utf-8')
+        self.assertNotIn("StrongPassword123!", response_text)
+        self.assertNotIn("password_confirm", response.json().get('data', {}))
+        self.assertNotIn("password", response.json().get('data', {}))
+
+    def test_newly_registered_distributor_exists_in_database(self):
+        response = self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(User.objects.filter(email="distributor@example.com").exists())
+        user = User.objects.get(email="distributor@example.com")
+        self.assertEqual(user.name, "Test Distributor")
+        self.assertEqual(user.company_name, "ABC Distributors")
+        self.assertEqual(user.phone, "9876543210")
+        self.assertTrue(user.distributor_id.startswith("DIST-"))
+
+    def test_existing_login_functionality_still_works(self):
+        # 1. Existing legacy user with plain text password logs in
+        login_response = self.client.post(reverse('distributor_login'), data={
+            'identity': self.existing_legacy_distributor.email,
+            'password': 'legacy_plain_password'
+        })
+        self.assertEqual(login_response.status_code, 302)
+        self.assertEqual(self.client.session.get('user_id'), self.existing_legacy_distributor.id)
+
+        # 2. Newly registered distributor with hashed password logs in
+        self.client.post(self.endpoint, data=self.valid_payload, content_type='application/json')
+        new_dist = User.objects.get(email="distributor@example.com")
+
+        new_login_response = self.client.post(reverse('distributor_login'), data={
+            'identity': new_dist.email,
+            'password': "StrongPassword123!"
+        })
+        self.assertEqual(new_login_response.status_code, 302)
+        self.assertEqual(self.client.session.get('user_id'), new_dist.id)
+
+    def test_existing_admin_functionality_remains_unaffected(self):
+        # Existing admin logs in via admin login
+        admin_response = self.client.post(reverse('admin_login'), data={
+            'admin_email': self.existing_admin.email,
+            'admin_password': 'admin_plain_password'
+        })
+        self.assertEqual(admin_response.status_code, 302)
+        self.assertEqual(self.client.session.get('user_id'), self.existing_admin.id)
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+
+
+
 
 
 

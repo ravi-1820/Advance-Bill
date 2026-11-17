@@ -1,5 +1,6 @@
-# Django Web Framework
+# Django Web Framework & REST Framework
 Django>=5.0,<7.0
+djangorestframework>=3.14.0
 asgiref>=3.8.0
 sqlparse>=0.5.0
 tzdata>=2024.1; sys_platform == 'win32'
