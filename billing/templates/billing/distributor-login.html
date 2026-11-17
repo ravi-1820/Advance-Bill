@@ -138,8 +138,6 @@
                     <div class="sub-nav">
                         <button type="button" class="sub-btn active" onclick="App.setSubTab('password')">Sign In</button>
                         <button type="button" class="sub-btn" onclick="App.setSubTab('otp')">Mobile Login</button>
-                        <a href="{% url 'distributor_register' %}" class="sub-btn"
-                            style="text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Register Account</a>
                     </div>
 
                     <!-- Password Login Form -->
@@ -241,6 +239,14 @@
                                 Verify & Enter POS
                             </button>
                         </form>
+                    </div>
+
+                    <!-- Register Customer Link Footer -->
+                    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.88rem; color: var(--text-muted);">
+                        Don't have an account?
+                        <a href="{% url 'distributor_register' %}" style="color: var(--dist-primary); font-weight: 700; text-decoration: none; margin-left: 0.35rem;">
+                            Register as Customer &rarr;
+                        </a>
                     </div>
                 </div>
 

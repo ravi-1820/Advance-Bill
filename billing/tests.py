@@ -964,6 +964,264 @@ class DistributorRegistrationAPITest(TestCase):
         self.assertEqual(self.client.session.get('usertype'), 'admin')
 
 
+class DistributorRegistrationFrontendTest(TestCase):
+    def test_registration_page_get_status_200(self):
+        response = self.client.get(reverse('distributor_register'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'billing/register.html')
+
+        alt_response = self.client.get(reverse('register'))
+        self.assertEqual(alt_response.status_code, 200)
+
+    def test_registration_page_contains_required_fields(self):
+        response = self.client.get(reverse('distributor_register'))
+        content = response.content.decode('utf-8')
+        self.assertIn('name="name"', content)
+        self.assertIn('name="email"', content)
+        self.assertIn('name="phone"', content)
+        self.assertIn('name="company_name"', content)
+        self.assertIn('name="password"', content)
+        self.assertIn('name="password_confirm"', content)
+
+    def test_registration_page_contains_password_visibility_toggles(self):
+        response = self.client.get(reverse('distributor_register'))
+        content = response.content.decode('utf-8')
+        self.assertIn("togglePasswordVisibility('reg-pass'", content)
+        self.assertIn("togglePasswordVisibility('reg-pass-confirm'", content)
+
+    def test_registration_page_contains_api_target_and_elements(self):
+        response = self.client.get(reverse('distributor_register'))
+        content = response.content.decode('utf-8')
+        self.assertIn('/api/register/distributor/', content)
+        self.assertIn('id="distributorRegisterForm"', content)
+        self.assertIn('id="btn-submit-registration"', content)
+        self.assertIn('id="btn-spinner"', content)
+        self.assertIn('id="alert-banner-error"', content)
+        self.assertIn('id="alert-banner-success"', content)
+        self.assertIn('id="feedback-name"', content)
+        self.assertIn('id="feedback-email"', content)
+        self.assertIn('id="feedback-phone"', content)
+        self.assertIn('id="feedback-company"', content)
+        self.assertIn('id="feedback-password"', content)
+        self.assertIn('id="feedback-password-confirm"', content)
+
+    def test_registration_page_responsive_meta_tag(self):
+        response = self.client.get(reverse('distributor_register'))
+        content = response.content.decode('utf-8')
+        self.assertIn('name="viewport"', content)
+        self.assertIn('width=device-width, initial-scale=1.0', content)
+
+    def test_registration_page_links_to_login(self):
+        response = self.client.get(reverse('distributor_register'))
+        content = response.content.decode('utf-8')
+        self.assertIn(reverse('distributor_login'), content)
+
+    def test_form_fallback_post_submission(self):
+        response = self.client.post(reverse('distributor_register'), data={
+            'name': 'Fallback Distributor',
+            'email': 'fallback@example.com',
+            'phone': '9876543210',
+            'company_name': 'Fallback Corp',
+            'password': 'SecurePassword123!'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(email='fallback@example.com').exists())
+        user = User.objects.get(email='fallback@example.com')
+        self.assertTrue(user.check_password('SecurePassword123!'))
+        self.assertEqual(user.usertype, 'distributor')
+
+
+class AdminPasswordRecoveryAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.recovery_url = reverse('api_password_recovery')
+        self.reset_url = reverse('api_password_reset')
+
+        self.admin_user = User.objects.create_superuser(
+            email="admin@billing.com",
+            password="OriginalAdminPassword123!",
+            name="System Administrator"
+        )
+        self.distributor_user = User.objects.create_user(
+            email="distributor@billing.com",
+            password="DistributorPassword123!",
+            name="Retail Distributor",
+            company_name="Retail Ltd",
+            phone="9876543210",
+            usertype="distributor"
+        )
+
+    def test_valid_admin_email_accepted_for_recovery_initiation(self):
+        response = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_data = response.json()
+        self.assertTrue(json_data['success'])
+        self.assertEqual(json_data['message'], "If the account is eligible, password recovery instructions will be provided.")
+        self.assertIn('data', json_data)
+        self.assertIn('reset_token', json_data['data'])
+
+    def test_invalid_email_format_is_rejected(self):
+        response = self.client.post(self.recovery_url, data={'email': 'not-an-email'}, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        json_data = response.json()
+        self.assertFalse(json_data['success'])
+        self.assertIn('errors', json_data)
+
+    def test_non_admin_distributor_cannot_recover_through_admin_workflow(self):
+        response = self.client.post(self.recovery_url, data={'email': 'distributor@billing.com'}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_data = response.json()
+        self.assertTrue(json_data['success'])
+        self.assertEqual(json_data['message'], "If the account is eligible, password recovery instructions will be provided.")
+        # Does not return reset_token for non-admin accounts
+        self.assertNotIn('data', json_data)
+
+    def test_unknown_email_does_not_reveal_account_existence(self):
+        response = self.client.post(self.recovery_url, data={'email': 'nonexistent@billing.com'}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_data = response.json()
+        self.assertTrue(json_data['success'])
+        self.assertEqual(json_data['message'], "If the account is eligible, password recovery instructions will be provided.")
+        self.assertNotIn('data', json_data)
+
+    def test_password_reset_requires_valid_recovery_authorization(self):
+        response = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'new_password': 'BrandNewAdminPassword123!',
+            'confirm_password': 'BrandNewAdminPassword123!'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        json_data = response.json()
+        self.assertFalse(json_data['success'])
+        self.assertIn('Password reset requires a valid recovery authorization mechanism.', str(json_data))
+
+    def test_password_reset_with_invalid_or_expired_token_is_rejected(self):
+        response = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': 'invalid.token.signature',
+            'new_password': 'BrandNewAdminPassword123!',
+            'confirm_password': 'BrandNewAdminPassword123!'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        json_data = response.json()
+        self.assertFalse(json_data['success'])
+
+    def test_password_reset_confirmation_mismatch_is_rejected(self):
+        recovery_resp = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        token = recovery_resp.json()['data']['reset_token']
+
+        response = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': 'BrandNewAdminPassword123!',
+            'confirm_password': 'MismatchedPassword999!'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        json_data = response.json()
+        self.assertFalse(json_data['success'])
+        self.assertEqual(json_data['message'], "Password confirmation does not match.")
+
+    def test_weak_password_rejected_by_configured_validators(self):
+        recovery_resp = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        token = recovery_resp.json()['data']['reset_token']
+
+        # Password entirely numeric and too short
+        response = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': '123',
+            'confirm_password': '123'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        json_data = response.json()
+        self.assertFalse(json_data['success'])
+
+    def test_successful_password_reset_updates_hash_and_allows_login(self):
+        recovery_resp = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        token = recovery_resp.json()['data']['reset_token']
+        new_pwd = "BrandNewAdminPassword123!"
+
+        reset_resp = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': new_pwd,
+            'confirm_password': new_pwd
+        }, content_type='application/json')
+        self.assertEqual(reset_resp.status_code, 200)
+        self.assertTrue(reset_resp.json()['success'])
+        self.assertEqual(reset_resp.json()['message'], "Password has been reset successfully.")
+
+        # Verify password in DB is hashed and matches new password
+        self.admin_user.refresh_from_db()
+        self.assertTrue(self.admin_user.check_password(new_pwd))
+        self.assertFalse(self.admin_user.check_password("OriginalAdminPassword123!"))
+        self.assertTrue(self.admin_user.password.startswith("pbkdf2_sha256$"))
+
+        # Verify admin login with new password succeeds
+        login_resp = self.client.post(reverse('admin_login'), data={
+            'admin_email': 'admin@billing.com',
+            'admin_password': new_pwd
+        })
+        self.assertEqual(login_resp.status_code, 302)
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+        self.assertEqual(self.client.session.get('user_id'), self.admin_user.id)
+
+        # Verify admin login with old password fails
+        bad_login_client = Client()
+        bad_login_resp = bad_login_client.post(reverse('admin_login'), data={
+            'admin_email': 'admin@billing.com',
+            'admin_password': "OriginalAdminPassword123!"
+        })
+        self.assertEqual(bad_login_resp.status_code, 200)
+        self.assertIsNone(bad_login_client.session.get('user_id'))
+
+    def test_token_cannot_be_reused_after_successful_reset(self):
+        recovery_resp = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        token = recovery_resp.json()['data']['reset_token']
+        new_pwd1 = "BrandNewAdminPassword123!"
+
+        # First reset succeeds
+        self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': new_pwd1,
+            'confirm_password': new_pwd1
+        }, content_type='application/json')
+
+        # Replay attempt with same token must be rejected
+        new_pwd2 = "AnotherNewPassword456!"
+        replay_resp = self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': new_pwd2,
+            'confirm_password': new_pwd2
+        }, content_type='application/json')
+        self.assertEqual(replay_resp.status_code, 400)
+        self.assertFalse(replay_resp.json()['success'])
+
+    def test_admin_privileges_and_distributor_accounts_remain_unchanged(self):
+        recovery_resp = self.client.post(self.recovery_url, data={'email': 'admin@billing.com'}, content_type='application/json')
+        token = recovery_resp.json()['data']['reset_token']
+        new_pwd = "BrandNewAdminPassword123!"
+
+        self.client.post(self.reset_url, data={
+            'email': 'admin@billing.com',
+            'reset_token': token,
+            'new_password': new_pwd,
+            'confirm_password': new_pwd
+        }, content_type='application/json')
+
+        self.admin_user.refresh_from_db()
+        self.assertEqual(self.admin_user.usertype, 'admin')
+
+        # Distributor remains untouched
+        self.distributor_user.refresh_from_db()
+        self.assertEqual(self.distributor_user.usertype, 'distributor')
+        self.assertTrue(self.distributor_user.check_password("DistributorPassword123!"))
+
+
+
+
 
 
 

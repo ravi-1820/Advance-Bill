@@ -692,7 +692,7 @@ def distributor_register(request):
             # Complete registration after validation passes: Save to database
             dist_id = f"DIST-{random.randint(10000, 99999)}"
 
-            User.objects.create(
+            User.objects.create_user(
                 name=name,
                 email=email,
                 password=password,

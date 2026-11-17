@@ -7,6 +7,10 @@ urlpatterns = [
     path('api/register/distributor/', api_views.DistributorRegistrationAPIView.as_view(), name='api_register_distributor'),
     path('api/distributor/register/', api_views.DistributorRegistrationAPIView.as_view(), name='api_distributor_register_alt'),
     path('api/register/', api_views.UserRegistrationAPIView.as_view(), name='api_register'),
+    path('api/password-recovery/', api_views.AdminPasswordRecoveryAPIView.as_view(), name='api_password_recovery'),
+    path('api/admin/password-recovery/', api_views.AdminPasswordRecoveryAPIView.as_view(), name='api_admin_password_recovery'),
+    path('api/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_password_reset'),
+    path('api/admin/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_admin_password_reset'),
 
     path('', views.index, name='index'),
     path('index/', views.index, name='index_alt'),

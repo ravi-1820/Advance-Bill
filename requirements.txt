@@ -5,6 +5,9 @@ asgiref>=3.8.0
 sqlparse>=0.5.0
 tzdata>=2024.1; sys_platform == 'win32'
 
+# Authentication, Password Recovery & Security
+# Utilizes Django built-in cryptographic signing (TimestampSigner), PBKDF2 hashing, and auth password validators
+
 # QR Code Generation (requires Pillow for image export)
 qrcode[pil]>=8.0
 pillow>=10.0.0

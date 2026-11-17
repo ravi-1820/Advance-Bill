@@ -5,10 +5,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Distributor Registration | Advance Billing System</title>
+    <title>Customer Registration | Advance Billing System</title>
 
-    <!-- Unified Clean Stylesheet -->
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Unified Application Stylesheet -->
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+
+    <style>
+        /* Scoped Enhancements for Distributor Registration */
+        .registration-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+            transition: all 0.3s ease;
+        }
+
+        body.theme-light .registration-card {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .form-section-clean {
+            padding: 2.75rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .input-box .input-field.is-invalid {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+
+        .input-box .input-field.is-valid {
+            border-color: #10b981 !important;
+        }
+
+        .field-feedback {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #ef4444;
+            margin-top: 0.35rem;
+            display: none;
+            padding-left: 2px;
+        }
+
+        .field-feedback.active {
+            display: block;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .eye-btn {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-dim);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+        }
+
+        .eye-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .btn-register-submit {
+            width: 100%;
+            height: 46px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-register-submit:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-register-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert-custom {
+            padding: 0.85rem 1.15rem;
+            border-radius: var(--radius-md);
+            font-size: 0.84rem;
+            font-weight: 500;
+            margin-bottom: 1.25rem;
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .alert-custom.alert-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .alert-custom.alert-success {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Responsive Form Layout Adjustments */
+        @media (max-width: 991px) {
+            .form-section-clean {
+                padding: 2.25rem 1.75rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .form-section-clean {
+                padding: 1.75rem 1.25rem;
+            }
+            .form-header h3 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="mode-distributor">
@@ -43,17 +189,16 @@
         </div>
     </header>
 
-    <!-- MAIN REGISTRATION PORTAL CARD -->
+    <!-- MAIN REGISTRATION PORTAL CONTAINER -->
     <main class="main-wrapper">
-        <div class="auth-card">
+        <div class="auth-card registration-card">
 
             <!-- LEFT HERO BRANDING SECTION -->
             <section class="hero-section">
                 <div>
-                    <span class="hero-tag">DISTRIBUTOR ONBOARDING</span>
+                    <span class="hero-tag">CUSTOMER ONBOARDING</span>
                     <h2>Join our Enterprise<br>Billing Network.</h2>
-                    <p>Create your distributor workspace today to gain instant access to dynamic QR invoicing, real-time
-                        inventory ledgers, and settlement tracking.</p>
+                    <p>Create your customer account today to gain instant access to dynamic QR invoicing, real-time inventory ledgers, and settlement tracking.</p>
 
                     <div class="hero-features">
                         <div class="feature-box">
@@ -62,7 +207,7 @@
                             </div>
                             <div class="feature-text">
                                 <h4>Instant ID Allocation</h4>
-                                <span>Unique DIST-XXXXX ID</span>
+                                <span>Unique Account ID</span>
                             </div>
                         </div>
 
@@ -72,7 +217,7 @@
                             </div>
                             <div class="feature-text">
                                 <h4>Instant QR Billing</h4>
-                                <span>Fast customer checkout</span>
+                                <span>Fast checkout payments</span>
                             </div>
                         </div>
 
@@ -81,8 +226,8 @@
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                             </div>
                             <div class="feature-text">
-                                <h4>Default Stock Allocation</h4>
-                                <span>Ready inventory balance</span>
+                                <h4>Inventory Ledger</h4>
+                                <span>Ready balance tracking</span>
                             </div>
                         </div>
 
@@ -103,106 +248,396 @@
                 </div>
             </section>
 
-
-            <!-- RIGHT FORM SECTION -->
-            <section class="form-section">
+            <!-- RIGHT FORM SECTION (CLEAN & ELEGANT) -->
+            <section class="form-section-clean">
                 <div class="form-header">
-                    <h3>Register Distributor</h3>
-                    <p>Fill out the details below to create your account</p>
+                    <h3>Customer Registration</h3>
+                    <p>Enter your details below to create your official customer account</p>
                 </div>
 
-                <!-- Django Feedback Messages -->
-                {% if messages %}
-                <div style="margin-bottom: 1rem;">
-                    {% for message in messages %}
-                    <div
-                        style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
+                <!-- Global Feedback Alert Banners -->
+                <div id="alert-banner-error" class="alert-custom alert-error" role="alert">
+                    <span id="alert-error-text">An error occurred. Please check the details and try again.</span>
                 </div>
-                {% endif %}
 
-                <!-- Distributor Registration Form -->
-                <form action="{% url 'distributor_register' %}" method="POST">
+                <div id="alert-banner-success" class="alert-custom alert-success" role="alert">
+                    <span id="alert-success-text">Customer registration completed successfully. Redirecting to login...</span>
+                </div>
+
+                <!-- Distributor Customer Registration Form -->
+                <form id="distributorRegisterForm" novalidate action="{% url 'distributor_register' %}" method="POST">
                     {% csrf_token %}
 
-                    <div class="form-group">
-                        <div class="label-row"><label>Full Name</label></div>
+                    <!-- 1. Full Name -->
+                    <div class="form-group mb-3">
+                        <div class="label-row"><label for="reg-name">Full Name <span class="text-danger">*</span></label></div>
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                             </span>
-                            <input type="text" name="name" class="input-field" placeholder="Enter Your Name" required>
+                            <input type="text" id="reg-name" name="name" class="input-field" placeholder="Enter Full Name" autocomplete="name" required>
                         </div>
+                        <div class="field-feedback" id="feedback-name">Full name is required.</div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row"><label>Email Address</label></div>
+                    <!-- 2. Email Address -->
+                    <div class="form-group mb-3">
+                        <div class="label-row"><label for="reg-email">Email Address <span class="text-danger">*</span></label></div>
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                             </span>
-                            <input type="email" name="email" class="input-field" placeholder="Enter Your Email"
-                                required>
+                            <input type="email" id="reg-email" name="email" class="input-field" placeholder="customer@example.com" autocomplete="email" required>
                         </div>
+                        <div class="field-feedback" id="feedback-email">Please enter a valid email address.</div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row"><label>Phone / Mobile Number</label></div>
+                    <!-- 3. Phone / Mobile Number -->
+                    <div class="form-group mb-3">
+                        <div class="label-row"><label for="reg-phone">Phone Number <span class="text-danger">*</span></label></div>
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                             </span>
-                            <input type="tel" name="phone" class="input-field" placeholder="Enter Your Phone Number"
-                                required>
+                            <input type="tel" id="reg-phone" name="phone" class="input-field" placeholder="10-digit mobile number" autocomplete="tel" required>
                         </div>
+                        <div class="field-feedback" id="feedback-phone">Phone number is required (at least 10 digits).</div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row"><label>Company / Outlet Name</label></div>
+                    <!-- 4. Company / Outlet Name -->
+                    <div class="form-group mb-3">
+                        <div class="label-row"><label for="reg-company">Company / Outlet Name <span class="text-danger">*</span></label></div>
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"></path></svg>
                             </span>
-                            <input type="text" name="company_name" class="input-field" placeholder="Enter Company Name"
-                                required>
+                            <input type="text" id="reg-company" name="company_name" class="input-field" placeholder="e.g. Apex Enterprises / Store" required>
                         </div>
+                        <div class="field-feedback" id="feedback-company">Company name is required.</div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row"><label>Password</label></div>
+                    <!-- 5. Password with Visibility Toggle -->
+                    <div class="form-group mb-3">
+                        <div class="label-row"><label for="reg-pass">Password <span class="text-danger">*</span></label></div>
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                             </span>
-                            <input type="password" id="reg-pass" name="password" class="input-field"
-                                placeholder="Enter Your Password" required>
-                            <button type="button" class="eye-btn"
-                                onclick="App.togglePassword('reg-pass', this)">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <input type="password" id="reg-pass" name="password" class="input-field" placeholder="Create a strong password" autocomplete="new-password" required>
+                            <button type="button" class="eye-btn" aria-label="Toggle password visibility" onclick="togglePasswordVisibility('reg-pass', this)">
+                                <svg class="eye-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                <svg class="eye-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                             </button>
                         </div>
+                        <div class="field-feedback" id="feedback-password">Password is required (minimum 6 characters).</div>
                     </div>
 
-                    <button type="submit" class="btn-primary"
-                        style="background: linear-gradient(135deg, #06b6d4, #2563eb); margin-top: 0.5rem;">
-                        Register Account
+                    <!-- 6. Confirm Password with Visibility Toggle -->
+                    <div class="form-group mb-4">
+                        <div class="label-row"><label for="reg-pass-confirm">Confirm Password <span class="text-danger">*</span></label></div>
+                        <div class="input-box">
+                            <span class="icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </span>
+                            <input type="password" id="reg-pass-confirm" name="password_confirm" class="input-field" placeholder="Re-enter password" autocomplete="new-password" required>
+                            <button type="button" class="eye-btn" aria-label="Toggle password confirm visibility" onclick="togglePasswordVisibility('reg-pass-confirm', this)">
+                                <svg class="eye-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                <svg class="eye-icon-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                            </button>
+                        </div>
+                        <div class="field-feedback" id="feedback-password-confirm">Passwords must match.</div>
+                    </div>
+
+                    <!-- Submit Button with Loading State -->
+                    <button type="submit" id="btn-submit-registration" class="btn-register-submit">
+                        <span id="btn-spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display:none;"></span>
+                        <span id="btn-submit-text">Register Customer</span>
                     </button>
                 </form>
 
-                <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                <div class="mt-4 text-center" style="font-size: 0.85rem; color: var(--text-muted);">
                     Already have an account?
-                    <a href="{% url 'index' %}"
-                        style="color: var(--color-primary); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">Sign In</a>
+                    <a href="{% url 'distributor_login' %}" style="color: var(--primary); font-weight: 600; text-decoration: none; margin-left: 0.25rem;">Sign In</a>
                 </div>
 
             </section>
         </div>
     </main>
 
-    <!-- Minimal JS App -->
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Base JS App -->
     <script src="{% static 'assets/js/app.js' %}"></script>
+
+    <!-- Registration Frontend Controller & API Integration Script -->
+    <script>
+        // Password Visibility Toggle Functionality
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+
+            const showIcon = btn.querySelector('.eye-icon-show');
+            const hideIcon = btn.querySelector('.eye-icon-hide');
+
+            if (showIcon && hideIcon) {
+                showIcon.style.display = isPassword ? 'none' : 'inline-block';
+                hideIcon.style.display = isPassword ? 'inline-block' : 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('distributorRegisterForm');
+            const submitBtn = document.getElementById('btn-submit-registration');
+            const btnSpinner = document.getElementById('btn-spinner');
+            const btnText = document.getElementById('btn-submit-text');
+
+            const alertError = document.getElementById('alert-banner-error');
+            const alertErrorText = document.getElementById('alert-error-text');
+            const alertSuccess = document.getElementById('alert-banner-success');
+            const alertSuccessText = document.getElementById('alert-success-text');
+
+            const fields = {
+                name: document.getElementById('reg-name'),
+                email: document.getElementById('reg-email'),
+                phone: document.getElementById('reg-phone'),
+                company_name: document.getElementById('reg-company'),
+                password: document.getElementById('reg-pass'),
+                password_confirm: document.getElementById('reg-pass-confirm')
+            };
+
+            const feedbacks = {
+                name: document.getElementById('feedback-name'),
+                email: document.getElementById('feedback-email'),
+                phone: document.getElementById('feedback-phone'),
+                company_name: document.getElementById('feedback-company'),
+                password: document.getElementById('feedback-password'),
+                password_confirm: document.getElementById('feedback-password-confirm')
+            };
+
+            // Clear errors on input change
+            Object.keys(fields).forEach(key => {
+                const el = fields[key];
+                if (!el) return;
+                el.addEventListener('input', function () {
+                    el.classList.remove('is-invalid');
+                    if (feedbacks[key]) {
+                        feedbacks[key].classList.remove('active');
+                        feedbacks[key].textContent = '';
+                    }
+                    hideAlerts();
+                });
+            });
+
+            function hideAlerts() {
+                if (alertError) alertError.style.display = 'none';
+                if (alertSuccess) alertSuccess.style.display = 'none';
+            }
+
+            function setFieldError(fieldName, message) {
+                const inputEl = fields[fieldName];
+                const feedbackEl = feedbacks[fieldName];
+                if (inputEl) inputEl.classList.add('is-invalid');
+                if (feedbackEl) {
+                    feedbackEl.textContent = message;
+                    feedbackEl.classList.add('active');
+                }
+            }
+
+            function clearAllErrors() {
+                hideAlerts();
+                Object.keys(fields).forEach(key => {
+                    if (fields[key]) fields[key].classList.remove('is-invalid');
+                    if (feedbacks[key]) {
+                        feedbacks[key].classList.remove('active');
+                        feedbacks[key].textContent = '';
+                    }
+                });
+            }
+
+            function setLoadingState(isLoading) {
+                if (isLoading) {
+                    submitBtn.disabled = true;
+                    btnSpinner.style.display = 'inline-block';
+                    btnText.textContent = 'Registering Customer...';
+                } else {
+                    submitBtn.disabled = false;
+                    btnSpinner.style.display = 'none';
+                    btnText.textContent = 'Register Customer';
+                }
+            }
+
+            // Client-Side Validation
+            function validateForm() {
+                clearAllErrors();
+                let isValid = true;
+                let firstInvalidField = null;
+
+                const nameVal = fields.name.value.trim();
+                const emailVal = fields.email.value.trim();
+                const phoneVal = fields.phone.value.trim();
+                const companyVal = fields.company_name.value.trim();
+                const passVal = fields.password.value;
+                const confirmVal = fields.password_confirm.value;
+
+                // 1. Full Name
+                if (!nameVal) {
+                    setFieldError('name', 'Full name is required.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.name;
+                }
+
+                // 2. Email Address
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailVal) {
+                    setFieldError('email', 'Email address is required.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.email;
+                } else if (!emailRegex.test(emailVal)) {
+                    setFieldError('email', 'Please enter a valid email address (e.g. customer@domain.com).');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.email;
+                }
+
+                // 3. Phone Number (digits >= 10)
+                const cleanPhone = phoneVal.replace(/\D/g, '');
+                if (!phoneVal) {
+                    setFieldError('phone', 'Phone number is required.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.phone;
+                } else if (cleanPhone.length < 10) {
+                    setFieldError('phone', 'Please enter a valid phone number with at least 10 digits.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.phone;
+                }
+
+                // 4. Company Name
+                if (!companyVal) {
+                    setFieldError('company_name', 'Company / Outlet name is required.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.company_name;
+                }
+
+                // 5. Password
+                if (!passVal) {
+                    setFieldError('password', 'Password is required.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.password;
+                } else if (passVal.length < 6) {
+                    setFieldError('password', 'Password must be at least 6 characters long.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.password;
+                }
+
+                // 6. Confirm Password & Match
+                if (!confirmVal) {
+                    setFieldError('password_confirm', 'Please confirm your password.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.password_confirm;
+                } else if (passVal !== confirmVal) {
+                    setFieldError('password_confirm', 'Password confirmation does not match password.');
+                    isValid = false;
+                    if (!firstInvalidField) firstInvalidField = fields.password_confirm;
+                }
+
+                if (firstInvalidField) {
+                    firstInvalidField.focus();
+                }
+
+                return isValid;
+            }
+
+            // Helper to extract CSRF token
+            function getCSRFToken() {
+                const csrfInput = form.querySelector('[name=csrfmiddlewaretoken]');
+                if (csrfInput) return csrfInput.value;
+                const match = document.cookie.match(/csrftoken=([^;]+)/);
+                return match ? match[1] : '';
+            }
+
+            // AJAX Form Submission
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!validateForm()) {
+                    return;
+                }
+
+                setLoadingState(true);
+
+                const payload = {
+                    name: fields.name.value.trim(),
+                    email: fields.email.value.trim().toLowerCase(),
+                    phone: fields.phone.value.trim(),
+                    company_name: fields.company_name.value.trim(),
+                    password: fields.password.value,
+                    password_confirm: fields.password_confirm.value
+                };
+
+                const apiUrl = "{% url 'api_register_distributor' %}";
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json().catch(() => ({}));
+
+                    if (response.status === 201 && (result.success || result.status === 'success')) {
+                        // Success handling
+                        const accountId = (result.data && result.data.distributor_id) ? ` (ID: ${result.data.distributor_id})` : '';
+                        alertSuccessText.textContent = `Customer registration completed successfully!${accountId} Redirecting to login...`;
+                        alertSuccess.style.display = 'block';
+
+                        // Disable inputs
+                        Object.values(fields).forEach(input => { if (input) input.disabled = true; });
+
+                        // Redirect to distributor login page
+                        setTimeout(() => {
+                            window.location.href = "{% url 'distributor_login' %}";
+                        }, 1800);
+
+                    } else if (response.status === 400) {
+                        // Validation error handling
+                        const generalMessage = result.message || 'Validation failed. Please correct the highlighted errors.';
+                        alertErrorText.textContent = generalMessage;
+                        alertError.style.display = 'block';
+
+                        if (result.errors && typeof result.errors === 'object') {
+                            Object.keys(result.errors).forEach(fieldKey => {
+                                const errorList = result.errors[fieldKey];
+                                const msg = Array.isArray(errorList) ? errorList.join(' ') : String(errorList);
+                                if (fields[fieldKey]) {
+                                    setFieldError(fieldKey, msg);
+                                }
+                            });
+                        }
+                        setLoadingState(false);
+
+                    } else {
+                        // Server error handling
+                        alertErrorText.textContent = result.message || 'An unexpected server error occurred. Please try again.';
+                        alertError.style.display = 'block';
+                        setLoadingState(false);
+                    }
+
+                } catch (networkError) {
+                    // Network / Connection failure
+                    alertErrorText.textContent = 'Unable to connect to the registration server. Please check your network connection and try again.';
+                    alertError.style.display = 'block';
+                    setLoadingState(false);
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
