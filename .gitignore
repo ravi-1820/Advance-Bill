@@ -46,11 +46,20 @@ media/
 staticfiles/
 /staticfiles/
 static_root/
+/static_root/
+uploads/
+/uploads/
+qr_codes/
+/qr_codes/
 
 # Environment variables & sensitive credentials
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.cert
+*.crt
 
 # Logs, temporary, and runtime files
 *.log

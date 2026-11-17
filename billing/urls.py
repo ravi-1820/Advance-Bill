@@ -4,6 +4,8 @@ from . import api_views
 
 urlpatterns = [
     # REST API Endpoints
+    path('api/products/', api_views.ProductListCreateAPIView.as_view(), name='api_products'),
+    path('api/products/<int:id>/', api_views.ProductDetailUpdateDeleteAPIView.as_view(), name='api_product_detail'),
     path('api/register/distributor/', api_views.DistributorRegistrationAPIView.as_view(), name='api_register_distributor'),
     path('api/distributor/register/', api_views.DistributorRegistrationAPIView.as_view(), name='api_distributor_register_alt'),
     path('api/register/', api_views.UserRegistrationAPIView.as_view(), name='api_register'),
@@ -21,6 +23,8 @@ urlpatterns = [
     path('admin-login/', views.admin_login, name='admin_login'),
     path('logout/', views.logout_view, name='logout'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin-products/', views.admin_products, name='admin_products'),
+    path('admin/products/', views.admin_products, name='admin_products_alt'),
     path('distributor-dashboard/', views.distributor_dashboard, name='distributor_dashboard'),
     path('distributor-profile/', views.distributor_profile, name='distributor_profile'),
     path('add-customer/', views.add_customer, name='add_customer'),

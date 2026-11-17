@@ -1583,6 +1583,216 @@ class OTPEmailVerificationAndRecoveryTest(TestCase):
         self.assertIsNone(bad_client.session.get('user_id'))
 
 
+class ProductManagementFrontendAndAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin_user = User.objects.create_user(
+            email="admin_pm@billing.com",
+            password="AdminPassword123!",
+            name="Admin PM",
+            usertype="admin"
+        )
+        self.distributor_user = User.objects.create_user(
+            email="dist_pm@billing.com",
+            password="DistPassword123!",
+            name="Dist PM",
+            usertype="distributor"
+        )
+        self.product1 = Product.objects.create(
+            name="Alpha Thermal Paper Roll",
+            category="POS Supplies",
+            price=120.00,
+            stock=50,
+            gst_rate=18.00
+        )
+        self.product2 = Product.objects.create(
+            name="Beta Barcode Scanner",
+            category="Hardware",
+            price=2500.00,
+            stock=15,
+            gst_rate=18.00
+        )
+
+    def test_admin_products_view_anonymous_redirect(self):
+        resp = self.client.get(reverse('admin_products'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin-login/', resp.url)
+
+    def test_admin_products_view_distributor_denied(self):
+        session = self.client.session
+        session['user_id'] = self.distributor_user.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        resp = self.client.get(reverse('admin_products'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin-login/', resp.url)
+
+    def test_admin_products_view_admin_success(self):
+        session = self.client.session
+        session['user_id'] = self.admin_user.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        resp = self.client.get(reverse('admin_products'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'billing/admin-products.html')
+        self.assertContains(resp, "Product Management")
+        self.assertContains(resp, "Alpha Thermal Paper Roll")
+        self.assertContains(resp, "Beta Barcode Scanner")
+
+    def test_admin_products_view_search_and_filter(self):
+        session = self.client.session
+        session['user_id'] = self.admin_user.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        # Search by keyword
+        resp_search = self.client.get(reverse('admin_products'), {'search': 'Scanner'})
+        self.assertEqual(resp_search.status_code, 200)
+        self.assertContains(resp_search, "Beta Barcode Scanner")
+        self.assertNotContains(resp_search, "Alpha Thermal Paper Roll")
+
+        # Filter by category
+        resp_cat = self.client.get(reverse('admin_products'), {'category': 'POS Supplies'})
+        self.assertEqual(resp_cat.status_code, 200)
+        self.assertContains(resp_cat, "Alpha Thermal Paper Roll")
+        self.assertNotContains(resp_cat, "Beta Barcode Scanner")
+
+    def test_api_products_list_and_search(self):
+        resp = self.client.get(reverse('api_products'))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['count'], 2)
+
+        # Search query
+        resp_search = self.client.get(reverse('api_products'), {'search': 'Alpha'})
+        self.assertEqual(resp_search.status_code, 200)
+        self.assertEqual(resp_search.json()['count'], 1)
+        self.assertEqual(resp_search.json()['data'][0]['name'], "Alpha Thermal Paper Roll")
+
+    def test_api_product_create_success(self):
+        payload = {
+            "name": "Wireless Laser Printer",
+            "category": "Hardware",
+            "price": "8999.00",
+            "stock": 10,
+            "gst_rate": "18.00"
+        }
+        resp = self.client.post(
+            reverse('api_products'),
+            payload,
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['data']['name'], "Wireless Laser Printer")
+        self.assertEqual(float(data['data']['price']), 8999.00)
+        self.assertEqual(data['data']['stock'], 10)
+        self.assertTrue(Product.objects.filter(name="Wireless Laser Printer").exists())
+
+    def test_api_product_create_validation_failures(self):
+        # 1. Missing name
+        resp = self.client.post(
+            reverse('api_products'),
+            {"name": "", "category": "Hardware", "price": "100.00", "stock": 5, "gst_rate": "18.00"},
+            content_type='application/json'
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json()['success'])
+
+        # 2. Invalid price <= 0
+        resp_price = self.client.post(
+            reverse('api_products'),
+            {"name": "Bad Price Item", "category": "General", "price": "-10.00", "stock": 5, "gst_rate": "18.00"},
+            content_type='application/json'
+        )
+        self.assertEqual(resp_price.status_code, 400)
+
+        # 3. Negative stock
+        resp_stock = self.client.post(
+            reverse('api_products'),
+            {"name": "Bad Stock Item", "category": "General", "price": "100.00", "stock": -1, "gst_rate": "18.00"},
+            content_type='application/json'
+        )
+        self.assertEqual(resp_stock.status_code, 400)
+
+        # 4. Invalid GST rate > 100
+        resp_gst = self.client.post(
+            reverse('api_products'),
+            {"name": "Bad GST Item", "category": "General", "price": "100.00", "stock": 5, "gst_rate": "150.00"},
+            content_type='application/json'
+        )
+        self.assertEqual(resp_gst.status_code, 400)
+
+    def test_api_product_detail_and_update(self):
+        # GET detail
+        resp = self.client.get(reverse('api_product_detail', kwargs={'id': self.product1.id}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['data']['name'], self.product1.name)
+        self.assertEqual(resp.json()['data']['invoice_items_count'], 0)
+
+        # PUT update
+        update_payload = {
+            "name": "Alpha Thermal Paper Roll (Super)",
+            "category": "POS Premium Supplies",
+            "price": "150.00",
+            "stock": 75,
+            "gst_rate": "12.00"
+        }
+        put_resp = self.client.put(
+            reverse('api_product_detail', kwargs={'id': self.product1.id}),
+            update_payload,
+            content_type='application/json'
+        )
+        self.assertEqual(put_resp.status_code, 200)
+        self.product1.refresh_from_db()
+        self.assertEqual(self.product1.name, "Alpha Thermal Paper Roll (Super)")
+        self.assertEqual(self.product1.category, "POS Premium Supplies")
+        self.assertEqual(float(self.product1.price), 150.00)
+        self.assertEqual(self.product1.stock, 75)
+
+    def test_api_product_delete_standalone_success(self):
+        product = Product.objects.create(
+            name="Temporary Test Item",
+            category="Test",
+            price=50.00,
+            stock=1,
+            gst_rate=0.00
+        )
+        del_resp = self.client.delete(reverse('api_product_detail', kwargs={'id': product.id}))
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertTrue(del_resp.json()['success'])
+        self.assertFalse(Product.objects.filter(id=product.id).exists())
+
+    def test_api_product_delete_protection_with_historical_invoices(self):
+        # Create customer and invoice with InvoiceItem referencing self.product2
+        customer = Customer.objects.create(name="Store Buyer", phone="9988776655")
+        invoice = Invoice.objects.create(
+            customer=customer,
+            invoice_number="INV-TEST-0099",
+            total_amount=2500.00
+        )
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product2,
+            quantity=1,
+            unit_price=2500.00,
+            total_price=2500.00
+        )
+
+        # Attempt DELETE via REST API
+        del_resp = self.client.delete(reverse('api_product_detail', kwargs={'id': self.product2.id}))
+        self.assertEqual(del_resp.status_code, 400)
+        self.assertFalse(del_resp.json()['success'])
+        self.assertIn("historical invoice records", del_resp.json()['message'])
+        # Verify product still exists in DB
+        self.assertTrue(Product.objects.filter(id=self.product2.id).exists())
+
+
+
 
 
 

@@ -3,18 +3,20 @@ from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from billing.models import User, OTP
+from billing.models import User, OTP, Product
 from billing.tokens import admin_recovery_token_generator
 from billing.serializers import (
     DistributorRegistrationSerializer,
     UserRegistrationSerializer,
     UserResponseSerializer,
     AdminPasswordRecoveryRequestSerializer,
-    AdminPasswordResetSerializer
+    AdminPasswordResetSerializer,
+    ProductSerializer
 )
 from billing.permissions import AdminAuthentication, IsAdminUserRole
 
@@ -320,4 +322,157 @@ class AdminPasswordResetAPIView(APIView):
             "message": first_error,
             "errors": errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductListCreateAPIView(APIView):
+    """
+    REST API endpoint to list products with optional search/category filter,
+    or create a new product.
+    Endpoint: GET /api/products/
+              POST /api/products/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        search = request.query_params.get('search', '').strip()
+        category = request.query_params.get('category', '').strip()
+        qs = Product.objects.all().order_by('-id')
+
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(category__icontains=search))
+        if category:
+            qs = qs.filter(category__iexact=category)
+
+        serializer = ProductSerializer(qs, many=True)
+        return Response({
+            "success": True,
+            "status": "success",
+            "count": qs.count(),
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        serializer = ProductSerializer(data=request.data)
+        if serializer.is_valid():
+            product = serializer.save()
+            return Response({
+                "success": True,
+                "status": "success",
+                "message": "Product created successfully.",
+                "data": ProductSerializer(product).data
+            }, status=status.HTTP_201_CREATED)
+
+        errors = serializer.errors
+        first_err = "Product validation failed."
+        if errors:
+            first_key = next(iter(errors))
+            first_val = errors[first_key]
+            first_err = first_val[0] if isinstance(first_val, list) and first_val else str(first_val)
+
+        return Response({
+            "success": False,
+            "status": "error",
+            "message": first_err,
+            "errors": errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductDetailUpdateDeleteAPIView(APIView):
+    """
+    REST API endpoint to retrieve, update, or delete a product.
+    Endpoint: GET /api/products/<int:id>/
+              PUT /api/products/<int:id>/
+              PATCH /api/products/<int:id>/
+              DELETE /api/products/<int:id>/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get_object(self, id):
+        try:
+            return Product.objects.get(id=id)
+        except Product.DoesNotExist:
+            return None
+
+    def get(self, request, id, *args, **kwargs):
+        product = self.get_object(id)
+        if not product:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Product not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        data = ProductSerializer(product).data
+        data['invoice_items_count'] = product.invoice_items.count()
+        return Response({
+            "success": True,
+            "status": "success",
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+    def put(self, request, id, *args, **kwargs):
+        return self.update(request, id, partial=False)
+
+    def patch(self, request, id, *args, **kwargs):
+        return self.update(request, id, partial=True)
+
+    def update(self, request, id, partial=False):
+        product = self.get_object(id)
+        if not product:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Product not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductSerializer(product, data=request.data, partial=partial)
+        if serializer.is_valid():
+            updated_product = serializer.save()
+            return Response({
+                "success": True,
+                "status": "success",
+                "message": "Product updated successfully.",
+                "data": ProductSerializer(updated_product).data
+            }, status=status.HTTP_200_OK)
+
+        errors = serializer.errors
+        first_err = "Product update validation failed."
+        if errors:
+            first_key = next(iter(errors))
+            first_val = errors[first_key]
+            first_err = first_val[0] if isinstance(first_val, list) and first_val else str(first_val)
+
+        return Response({
+            "success": False,
+            "status": "error",
+            "message": first_err,
+            "errors": errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, id, *args, **kwargs):
+        product = self.get_object(id)
+        if not product:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Product not found."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Protect historical invoices: verify product is not associated with InvoiceItem records
+        if product.invoice_items.exists():
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Cannot delete product associated with historical invoice records."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        product.delete()
+        return Response({
+            "success": True,
+            "status": "success",
+            "message": "Product deleted successfully."
+        }, status=status.HTTP_200_OK)
+
 

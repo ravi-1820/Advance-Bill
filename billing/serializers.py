@@ -2,8 +2,47 @@ import random
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from billing.models import User
+from billing.models import User, Product
 from billing.tokens import admin_recovery_token_generator
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Product Management operations.
+    Supports only the actual fields defined on the Product model:
+    name, category, price, stock, gst_rate, and created_at.
+    """
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'category', 'price', 'stock', 'gst_rate', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_name(self, value):
+        stripped = value.strip()
+        if not stripped:
+            raise serializers.ValidationError("Product name is required.")
+        return stripped
+
+    def validate_category(self, value):
+        stripped = value.strip()
+        if not stripped:
+            raise serializers.ValidationError("Category is required.")
+        return stripped
+
+    def validate_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Price must be greater than 0.")
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Stock cannot be negative.")
+        return value
+
+    def validate_gst_rate(self, value):
+        if value < 0 or value > 100:
+            raise serializers.ValidationError("GST rate must be between 0% and 100%.")
+        return value
 
 
 class UserResponseSerializer(serializers.ModelSerializer):

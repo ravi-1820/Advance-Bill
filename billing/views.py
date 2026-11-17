@@ -651,6 +651,61 @@ def admin_dashboard(request):
         return redirect('index')
 
 
+def admin_products(request):
+    """
+    Dedicated Product Management interface inside Admin Dashboard.
+    Supports search, category filtering, pagination, and modal CRUD operations.
+    Restricted strictly to Administrator users.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='admin')
+            except User.DoesNotExist:
+                user = None
+
+        if not user and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'admin':
+            user = request.user
+
+        if not user:
+            messages.error(request, "Access restricted to Administrators only..!")
+            return redirect('admin_login')
+
+        search = request.GET.get('search', '').strip()
+        category = request.GET.get('category', '').strip()
+
+        qs = Product.objects.all().order_by('-id')
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(category__icontains=search))
+        if category:
+            qs = qs.filter(category__iexact=category)
+
+        total_products = Product.objects.count()
+        total_stock = sum(p.stock for p in Product.objects.all())
+        low_stock_count = Product.objects.filter(stock__lte=5).count()
+        categories = list(Product.objects.values_list('category', flat=True).distinct().order_by('category'))
+
+        paginator = Paginator(qs, 10)
+        page_number = request.GET.get('page', 1)
+        products = paginator.get_page(page_number)
+
+        return render(request, 'billing/admin-products.html', {
+            'user': user,
+            'products': products,
+            'search': search,
+            'selected_category': category,
+            'categories': categories,
+            'total_products': total_products,
+            'total_stock': total_stock,
+            'low_stock_count': low_stock_count,
+        })
+    except Exception as e:
+        messages.error(request, f"Error loading products: {str(e)}")
+        return redirect('admin_dashboard')
+
+
 @csrf_exempt
 def distributor_register(request):
     if request.method == 'POST':
@@ -736,6 +791,7 @@ def distributor_register(request):
 def generate_forgot_otp(request):
     if request.method == 'POST':
         try:
+            
             identity = request.POST.get('identity', '').strip()
             user = None
 
