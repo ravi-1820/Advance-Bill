@@ -1,6 +1,9 @@
+from datetime import timedelta
+from django.utils import timezone
+from django.core import mail
 from django.test import TestCase, Client
 from django.urls import reverse
-from billing.models import User, Customer, Product, Invoice, InvoiceItem
+from billing.models import User, Customer, Product, Invoice, InvoiceItem, OTP
 from billing.forms import InvoiceCreationForm
 
 
@@ -1218,6 +1221,367 @@ class AdminPasswordRecoveryAPITest(TestCase):
         self.distributor_user.refresh_from_db()
         self.assertEqual(self.distributor_user.usertype, 'distributor')
         self.assertTrue(self.distributor_user.check_password("DistributorPassword123!"))
+
+
+class ProductCRUDOperationsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="John Dist",
+            email="dist@testcrud.com",
+            password="pass",
+            phone="9876543210",
+            distributor_id="DIST-99112",
+            company_name="Apex POS",
+            usertype="distributor"
+        )
+        self.admin = User.objects.create_superuser(
+            email="admin@testcrud.com",
+            password="admin_pass",
+            name="Admin User"
+        )
+        # Login distributor session
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+    def test_create_product_success(self):
+        response = self.client.post(reverse('add_product'), {
+            'name': 'Wireless Barcode Scanner',
+            'category': 'Hardware',
+            'price': '4500.00',
+            'stock': '25',
+            'gst_rate': '18.0'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Product.objects.filter(name='Wireless Barcode Scanner').exists())
+        product = Product.objects.get(name='Wireless Barcode Scanner')
+        self.assertEqual(product.price, 4500.00)
+        self.assertEqual(product.stock, 25)
+
+    def test_create_product_missing_name_rejected(self):
+        response = self.client.post(reverse('add_product'), {
+            'name': '',
+            'category': 'Hardware',
+            'price': '4500.00',
+            'stock': '25'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(category='Hardware').exists())
+
+    def test_create_product_invalid_price_rejected(self):
+        response = self.client.post(reverse('add_product'), {
+            'name': 'Free Scanner',
+            'category': 'Hardware',
+            'price': '-50.00',
+            'stock': '25'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(name='Free Scanner').exists())
+
+    def test_create_product_negative_stock_rejected(self):
+        response = self.client.post(reverse('add_product'), {
+            'name': 'Negative Stock Scanner',
+            'category': 'Hardware',
+            'price': '500.00',
+            'stock': '-5'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(name='Negative Stock Scanner').exists())
+
+    def test_product_list_display_and_search(self):
+        p1 = Product.objects.create(name="POS Thermal Printer", category="Printers", price=7500.00, stock=10)
+        p2 = Product.objects.create(name="Cash Drawer Metal", category="Security", price=3200.00, stock=15)
+
+        # 1. Full list display
+        response = self.client.get(reverse('product_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "POS Thermal Printer")
+        self.assertContains(response, "Cash Drawer Metal")
+
+        # 2. Search query by name
+        search_resp = self.client.get(reverse('product_list'), {'search': 'Thermal'})
+        self.assertEqual(search_resp.status_code, 200)
+        self.assertContains(search_resp, "POS Thermal Printer")
+        self.assertNotContains(search_resp, "Cash Drawer Metal")
+
+    def test_product_list_empty(self):
+        Product.objects.all().delete()
+        response = self.client.get(reverse('product_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['products']), 0)
+
+    def test_edit_product_prefilled_and_update_success(self):
+        product = Product.objects.create(name="Receipt Paper Rolls", category="Consumables", price=120.00, stock=100)
+
+        # GET request returns pre-filled values
+        get_resp = self.client.get(reverse('edit_product', args=[product.id]))
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertEqual(get_resp.context['name'], "Receipt Paper Rolls")
+        self.assertEqual(get_resp.context['price'], 120.00)
+
+        # POST updates the product without creating duplicates
+        post_resp = self.client.post(reverse('edit_product', args=[product.id]), {
+            'name': 'Premium Receipt Paper Rolls',
+            'category': 'Consumables',
+            'price': '150.00',
+            'stock': '80',
+            'gst_rate': '12.0'
+        }, follow=True)
+        self.assertEqual(post_resp.status_code, 200)
+
+        # Confirm update in DB
+        product.refresh_from_db()
+        self.assertEqual(product.name, 'Premium Receipt Paper Rolls')
+        self.assertEqual(product.price, 150.00)
+        self.assertEqual(product.stock, 80)
+        self.assertEqual(Product.objects.count(), 1)
+
+    def test_edit_product_invalid_price_rejected(self):
+        product = Product.objects.create(name="Receipt Paper Rolls", category="Consumables", price=120.00, stock=100)
+        response = self.client.post(reverse('edit_product', args=[product.id]), {
+            'name': 'Receipt Paper Rolls',
+            'category': 'Consumables',
+            'price': '0',
+            'stock': '100'
+        })
+        self.assertEqual(response.status_code, 200)
+        product.refresh_from_db()
+        self.assertEqual(product.price, 120.00)
+
+    def test_delete_eligible_product_success(self):
+        product = Product.objects.create(name="Obsolete Model", category="Hardware", price=100.00, stock=1)
+        response = self.client.post(reverse('delete_product', args=[product.id]), follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(id=product.id).exists())
+
+    def test_delete_product_with_associated_invoice_item_prevented(self):
+        customer = Customer.objects.create(name="VIP Customer", phone="9876543210")
+        product = Product.objects.create(name="Billed Item", category="Goods", price=500.00, stock=10)
+        invoice = Invoice.objects.create(customer=customer, invoice_number="INV-HIST-001", total_amount=500.00)
+        item = InvoiceItem.objects.create(invoice=invoice, product=product, quantity=1, unit_price=500.00, total_price=500.00)
+
+        # Attempt to delete product associated with an invoice
+        response = self.client.post(reverse('delete_product', args=[product.id]), follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        # Confirm product and invoice item still exist intact
+        self.assertTrue(Product.objects.filter(id=product.id).exists())
+        self.assertTrue(InvoiceItem.objects.filter(id=item.id).exists())
+        self.assertTrue(Invoice.objects.filter(id=invoice.id).exists())
+
+    def test_product_operations_require_authentication(self):
+        unauth_client = Client()
+
+        resp_add = unauth_client.get(reverse('add_product'))
+        self.assertEqual(resp_add.status_code, 302)
+
+        resp_list = unauth_client.get(reverse('product_list'))
+        self.assertEqual(resp_list.status_code, 302)
+
+        product = Product.objects.create(name="Test Auth", category="Hardware", price=100.00, stock=1)
+        resp_edit = unauth_client.get(reverse('edit_product', args=[product.id]))
+        self.assertEqual(resp_edit.status_code, 302)
+
+        resp_del = unauth_client.post(reverse('delete_product', args=[product.id]))
+        self.assertEqual(resp_del.status_code, 302)
+        self.assertTrue(Product.objects.filter(id=product.id).exists())
+
+    def test_admin_user_can_manage_products(self):
+        admin_client = Client()
+        session = admin_client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        # Admin creates product
+        add_resp = admin_client.post(reverse('add_product'), {
+            'name': 'Admin Created Product',
+            'category': 'Admin Hardware',
+            'price': '9999.00',
+            'stock': '5',
+            'gst_rate': '18.0'
+        }, follow=True)
+        self.assertEqual(add_resp.status_code, 200)
+        self.assertTrue(Product.objects.filter(name='Admin Created Product').exists())
+
+
+class OTPEmailVerificationAndRecoveryTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        mail.outbox = []
+        self.admin = User.objects.create_superuser(
+            email="security.admin@billing.com",
+            password="InitialAdminPass123!",
+            name="Security Admin"
+        )
+        self.distributor = User.objects.create_user(
+            email="dist.user@billing.com",
+            password="DistUserPass123!",
+            name="Standard Distributor",
+            usertype="distributor"
+        )
+
+    def test_otp_generation_and_email_delivery(self):
+        response = self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        # 1. Verify OTP record in DB
+        otp_rec = OTP.objects.filter(identity='security.admin@billing.com').first()
+        self.assertIsNotNone(otp_rec)
+        self.assertEqual(len(otp_rec.otp), 6)
+        self.assertTrue(otp_rec.otp.isdigit())
+
+        # 2. Verify Email Delivery
+        self.assertEqual(len(mail.outbox), 1)
+        sent_email = mail.outbox[0]
+        self.assertEqual(sent_email.to, ['security.admin@billing.com'])
+        self.assertIn("Admin Password Recovery", sent_email.subject)
+        self.assertIn(otp_rec.otp, sent_email.body)
+        self.assertIn("5 minutes", sent_email.body)
+
+    def test_otp_not_exposed_in_api_response(self):
+        response = self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        otp_rec = OTP.objects.filter(identity='security.admin@billing.com').first()
+        self.assertNotIn(otp_rec.otp, response.content.decode('utf-8'))
+
+    def test_otp_verification_correct_code_returns_reset_token(self):
+        # 1. Initiate recovery
+        self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        otp_code = mail.outbox[0].body.split(": ")[1].split("\n")[0].strip()
+
+        # 2. Verify OTP
+        verify_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': otp_code
+        }, content_type='application/json')
+        self.assertEqual(verify_resp.status_code, 200)
+        json_data = verify_resp.json()
+        self.assertTrue(json_data['success'])
+        self.assertIn('data', json_data)
+        self.assertIn('reset_token', json_data['data'])
+
+        # Confirm marked as verified
+        otp_rec = OTP.objects.get(identity='security.admin@billing.com')
+        self.assertTrue(otp_rec.is_verified)
+
+    def test_otp_verification_incorrect_code_rejected(self):
+        self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+
+        verify_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': '000000'
+        }, content_type='application/json')
+        self.assertEqual(verify_resp.status_code, 400)
+        self.assertFalse(verify_resp.json()['success'])
+
+    def test_otp_verification_expired_rejected(self):
+        self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        otp_rec = OTP.objects.get(identity='security.admin@billing.com')
+
+        # Backdate OTP created_at by 6 minutes
+        otp_rec.created_at = timezone.now() - timedelta(minutes=6)
+        otp_rec.save()
+
+        verify_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': otp_rec.otp
+        }, content_type='application/json')
+        self.assertEqual(verify_resp.status_code, 400)
+        self.assertIn("expired", verify_resp.json()['message'].lower())
+
+    def test_otp_verification_already_used_rejected(self):
+        self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        otp_rec = OTP.objects.get(identity='security.admin@billing.com')
+        otp_code = otp_rec.otp
+
+        # First verification succeeds
+        first_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': otp_code
+        }, content_type='application/json')
+        self.assertEqual(first_resp.status_code, 200)
+
+        # Second verification with same OTP must be rejected
+        second_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': otp_code
+        }, content_type='application/json')
+        self.assertEqual(second_resp.status_code, 400)
+        self.assertIn("already been used", second_resp.json()['message'])
+
+    def test_otp_verification_non_admin_rejected(self):
+        # Distributor tries to verify OTP
+        OTP.objects.create(identity='dist.user@billing.com', otp='112233')
+        verify_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'dist.user@billing.com',
+            'otp': '112233'
+        }, content_type='application/json')
+        self.assertEqual(verify_resp.status_code, 400)
+
+    def test_complete_end_to_end_password_recovery_workflow(self):
+        # Step 1: Admin requests password recovery
+        recovery_resp = self.client.post(reverse('api_password_recovery'), {
+            'email': 'security.admin@billing.com'
+        }, content_type='application/json')
+        self.assertEqual(recovery_resp.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+
+        # Step 2: Retrieve OTP from received email
+        body = mail.outbox[0].body
+        otp_code = body.split(": ")[1].split("\n")[0].strip()
+
+        # Step 3: Verify OTP and obtain reset token
+        verify_resp = self.client.post(reverse('api_verify_otp'), {
+            'email': 'security.admin@billing.com',
+            'otp': otp_code
+        }, content_type='application/json')
+        self.assertEqual(verify_resp.status_code, 200)
+        reset_token = verify_resp.json()['data']['reset_token']
+
+        # Step 4: Reset password with valid token
+        new_password = "ComplexSecureAdminPassword2026!"
+        reset_resp = self.client.post(reverse('api_password_reset'), {
+            'email': 'security.admin@billing.com',
+            'reset_token': reset_token,
+            'new_password': new_password,
+            'confirm_password': new_password
+        }, content_type='application/json')
+        self.assertEqual(reset_resp.status_code, 200)
+        self.assertTrue(reset_resp.json()['success'])
+
+        # Step 5: Verify new password works for Admin login
+        login_resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'security.admin@billing.com',
+            'admin_password': new_password
+        })
+        self.assertEqual(login_resp.status_code, 302)
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+
+        # Step 6: Verify old password fails
+        bad_client = Client()
+        bad_resp = bad_client.post(reverse('admin_login'), {
+            'admin_email': 'security.admin@billing.com',
+            'admin_password': "InitialAdminPass123!"
+        })
+        self.assertEqual(bad_resp.status_code, 200)
+        self.assertIsNone(bad_client.session.get('user_id'))
+
 
 
 

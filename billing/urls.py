@@ -9,6 +9,9 @@ urlpatterns = [
     path('api/register/', api_views.UserRegistrationAPIView.as_view(), name='api_register'),
     path('api/password-recovery/', api_views.AdminPasswordRecoveryAPIView.as_view(), name='api_password_recovery'),
     path('api/admin/password-recovery/', api_views.AdminPasswordRecoveryAPIView.as_view(), name='api_admin_password_recovery'),
+    path('api/password-recovery/verify-otp/', api_views.AdminOTPVerificationAPIView.as_view(), name='api_verify_otp'),
+    path('api/verify-otp/', api_views.AdminOTPVerificationAPIView.as_view(), name='api_verify_otp_alt'),
+    path('api/admin/verify-otp/', api_views.AdminOTPVerificationAPIView.as_view(), name='api_admin_verify_otp'),
     path('api/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_password_reset'),
     path('api/admin/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_admin_password_reset'),
 

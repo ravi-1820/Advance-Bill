@@ -267,7 +267,10 @@ def add_product(request):
         if not user_id:
             return redirect('distributor_login')
 
-        user = User.objects.get(id=user_id, usertype='distributor')
+        user = User.objects.get(id=user_id)
+        if user.usertype not in ['admin', 'distributor']:
+            messages.error(request, "Access restricted to authorized users..!")
+            return redirect('distributor_login')
 
         if request.method == 'POST':
             name = request.POST.get('name', '').strip()
@@ -357,7 +360,10 @@ def product_list(request):
         if not user_id:
             return redirect('distributor_login')
 
-        user = User.objects.get(id=user_id, usertype='distributor')
+        user = User.objects.get(id=user_id)
+        if user.usertype not in ['admin', 'distributor']:
+            messages.error(request, "Access restricted to authorized users..!")
+            return redirect('distributor_login')
 
         search = request.GET.get('search', '').strip()
         if search:
@@ -481,7 +487,10 @@ def edit_product(request, id):
         if not user_id:
             return redirect('distributor_login')
 
-        user = User.objects.get(id=user_id, usertype='distributor')
+        user = User.objects.get(id=user_id)
+        if user.usertype not in ['admin', 'distributor']:
+            messages.error(request, "Access restricted to authorized users..!")
+            return redirect('distributor_login')
         product = Product.objects.get(id=id)
 
         if request.method == 'POST':
@@ -601,8 +610,17 @@ def delete_product(request, id):
         if not user_id:
             return redirect('distributor_login')
 
-        user = User.objects.get(id=user_id, usertype='distributor')
+        user = User.objects.get(id=user_id)
+        if user.usertype not in ['admin', 'distributor']:
+            messages.error(request, "Access restricted to authorized users..!")
+            return redirect('distributor_login')
+
         product = Product.objects.get(id=id)
+
+        # Protect historical invoices: verify product is not associated with InvoiceItem records
+        if product.invoice_items.exists():
+            messages.error(request, "Cannot delete product associated with historical invoice records.")
+            return redirect('product_list')
 
         if request.method == 'POST' or request.method == 'GET':
             product.delete()

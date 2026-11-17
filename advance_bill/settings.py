@@ -132,6 +132,7 @@ STATIC_URL = 'static/'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+DEFAULT_FROM_EMAIL = 'noreply@advancebilling.com'
 
 MAILERS = {
     'default': {
