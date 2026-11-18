@@ -749,57 +749,33 @@
             </form>
         </div>
 
-        <!-- 4 Metric Cards -->
+        <!-- Summary Cards (Task 2: Total Invoices & Total Amount Collected) -->
         <div class="metrics-grid">
+            <!-- Card 1: Total Invoices -->
             <div class="metric-card">
                 <div class="metric-top">
                     <span class="metric-label">Total Invoices</span>
                     <div class="metric-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
                     </div>
                 </div>
                 <div class="metric-number">{{ total_invoices|default:"0" }}</div>
                 <div class="metric-foot">
-                    <span>Invoices generated in scope</span>
+                    <span>Invoices generated within selected date range</span>
                 </div>
             </div>
 
+            <!-- Card 2: Total Amount Collected -->
             <div class="metric-card">
                 <div class="metric-top">
-                    <span class="metric-label">Total Revenue</span>
-                    <div class="metric-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <span class="metric-label">Total Amount Collected</span>
+                    <div class="metric-icon" style="color: var(--admin-accent);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     </div>
                 </div>
-                <div class="metric-number" style="color: var(--admin-accent);">₹ {{ total_sales|floatformat:2 }}</div>
+                <div class="metric-number" style="color: var(--admin-accent);">₹ {{ total_amount_collected|default:total_sales|floatformat:2 }}</div>
                 <div class="metric-foot" style="color: var(--admin-accent);">
-                    <span>Gross transaction value</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-top">
-                    <span class="metric-label">Total Units Sold</span>
-                    <div class="metric-icon" style="color: #60a5fa;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                    </div>
-                </div>
-                <div class="metric-number" style="color: #60a5fa;">{{ total_units_sold|default:"0" }}</div>
-                <div class="metric-foot">
-                    <span>Products dispensed via POS</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-top">
-                    <span class="metric-label">Average Invoice Value</span>
-                    <div class="metric-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    </div>
-                </div>
-                <div class="metric-number">₹ {{ avg_invoice_value|floatformat:2 }}</div>
-                <div class="metric-foot">
-                    <span>Average spend per customer</span>
+                    <span>Successfully collected / paid amounts</span>
                 </div>
             </div>
         </div>
@@ -902,10 +878,24 @@
                                 ₹ {{ invoice.total_amount|floatformat:2 }}
                             </td>
                             <td>
+                                {% if invoice.payment_status|lower == 'paid' %}
                                 <span class="shadcn-badge badge-live">
                                     <span class="pulse-dot"></span>
                                     <span>Paid</span>
                                 </span>
+                                {% elif invoice.payment_status|lower == 'pending' %}
+                                <span class="shadcn-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.25);">
+                                    <span>Pending</span>
+                                </span>
+                                {% elif invoice.payment_status|lower == 'failed' %}
+                                <span class="shadcn-badge" style="background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.25);">
+                                    <span>Failed</span>
+                                </span>
+                                {% else %}
+                                <span class="shadcn-badge" style="background: rgba(239, 68, 68, 0.08); color: #f87171; border-color: rgba(239, 68, 68, 0.2);">
+                                    <span>{{ invoice.payment_status|default:"Unpaid"|title }}</span>
+                                </span>
+                                {% endif %}
                             </td>
                             <td style="text-align: right;">
                                 <a href="{% url 'invoice_pdf' invoice.id %}" target="_blank" class="btn-shadcn btn-secondary btn-sm" title="Download Invoice PDF">

@@ -1,5 +1,6 @@
 # ==============================================================================
 # Advance Billing System with QR - Production & Development Requirements
+# Modules: Customer & Product Management, Invoicing, QR Codes, Reports & Analytics
 # ==============================================================================
 
 # Core Django Framework & REST API Architecture

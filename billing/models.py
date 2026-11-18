@@ -99,9 +99,17 @@ class Product(models.Model):
 
 
 class Invoice(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+        ('pending', 'Pending'),
+        ('failed', 'Failed'),
+    ]
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='invoices')
     invoice_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='paid')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

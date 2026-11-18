@@ -2613,6 +2613,244 @@ class ReportDateRangeFilterFormTest(TestCase):
         self.assertIn(reverse('admin_login'), resp_dist.url)
 
 
+class DateRangeInvoiceCountAndCollectedAmountTest(TestCase):
+    """
+    Test suite for Task 2: Display Total Number of Invoices and Total Amount Collected
+    Within the Selected Date Range.
+    Tests:
+    - Date range containing multiple paid invoices.
+    - Date range containing unpaid invoices.
+    - Date range containing failed payments.
+    - Date range with no invoices.
+    - Date range containing both paid and unpaid/failed invoices.
+    - Accurate calculation using Django ORM Count and Sum.
+    - Exclusion of pending, failed, or unpaid invoices from collected amounts.
+    - Frontend summary cards rendering and currency formatting (₹).
+    - Preserves Task 1 date-range filtering functionality.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser(
+            email="analytics.admin@billing.com",
+            password="AdminPassword123!",
+            name="Analytics Admin"
+        )
+        self.customer = Customer.objects.create(
+            name="Retail Partner Corp",
+            email="partner@retail.com",
+            phone="9123456780",
+            address="456 Market St, Floor 3"
+        )
+        self.product = Product.objects.create(
+            name="Retail POS Terminal",
+            category="Hardware",
+            price=Decimal('500.00'),
+            stock=50
+        )
+
+        self.now = timezone.now()
+        # Setup specific date benchmarks
+        self.target_date = self.now - timedelta(days=3)
+        self.start_str = (self.target_date - timedelta(days=1)).strftime('%Y-%m-%d')
+        self.end_str = (self.target_date + timedelta(days=1)).strftime('%Y-%m-%d')
+
+    def authenticate_admin(self):
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+    def test_date_range_multiple_paid_invoices(self):
+        """Date range containing multiple paid invoices computes total invoices and total collected amount correctly."""
+        self.authenticate_admin()
+        # Create 3 paid invoices within target date range
+        inv1 = Invoice.objects.create(
+            invoice_number="INV-PAID-01",
+            customer=self.customer,
+            total_amount=Decimal('500.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv1.id).update(created_at=self.target_date)
+
+        inv2 = Invoice.objects.create(
+            invoice_number="INV-PAID-02",
+            customer=self.customer,
+            total_amount=Decimal('350.50'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv2.id).update(created_at=self.target_date)
+
+        inv3 = Invoice.objects.create(
+            invoice_number="INV-PAID-03",
+            customer=self.customer,
+            total_amount=Decimal('150.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv3.id).update(created_at=self.target_date)
+
+        # Invoice outside date range (should not be counted)
+        inv_outside = Invoice.objects.create(
+            invoice_number="INV-PAID-OUTSIDE",
+            customer=self.customer,
+            total_amount=Decimal('999.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv_outside.id).update(created_at=self.now - timedelta(days=20))
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 3)
+        self.assertEqual(resp.context['total_amount_collected'], Decimal('1000.50'))
+        self.assertContains(resp, "Total Invoices")
+        self.assertContains(resp, "Total Amount Collected")
+        self.assertContains(resp, "1000.50")
+
+    def test_date_range_unpaid_invoices_excluded_from_collected_amount(self):
+        """Unpaid invoices increment total invoice count but are strictly excluded from collected amount."""
+        self.authenticate_admin()
+        inv_unpaid1 = Invoice.objects.create(
+            invoice_number="INV-UNPAID-01",
+            customer=self.customer,
+            total_amount=Decimal('400.00'),
+            payment_status="unpaid"
+        )
+        Invoice.objects.filter(id=inv_unpaid1.id).update(created_at=self.target_date)
+
+        inv_unpaid2 = Invoice.objects.create(
+            invoice_number="INV-UNPAID-02",
+            customer=self.customer,
+            total_amount=Decimal('600.00'),
+            payment_status="unpaid"
+        )
+        Invoice.objects.filter(id=inv_unpaid2.id).update(created_at=self.target_date)
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 2)
+        self.assertEqual(resp.context['total_amount_collected'], Decimal('0.00'))
+
+    def test_date_range_failed_payments_excluded_from_collected_amount(self):
+        """Failed invoices are counted in total invoices but excluded from collected amount."""
+        self.authenticate_admin()
+        inv_failed = Invoice.objects.create(
+            invoice_number="INV-FAILED-01",
+            customer=self.customer,
+            total_amount=Decimal('750.00'),
+            payment_status="failed"
+        )
+        Invoice.objects.filter(id=inv_failed.id).update(created_at=self.target_date)
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 1)
+        self.assertEqual(resp.context['total_amount_collected'], Decimal('0.00'))
+
+    def test_date_range_with_no_invoices(self):
+        """Date range with no matching invoices safely returns 0 invoices and ₹0.00 collected amount."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': '2021-01-01',
+            'end_date': '2021-01-10'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['total_amount_collected'], Decimal('0.00'))
+        self.assertContains(resp, "0.00")
+
+    def test_date_range_mixed_paid_unpaid_pending_and_failed(self):
+        """Mixed status invoices: count includes all invoices, collected amount sums ONLY paid invoices."""
+        self.authenticate_admin()
+        # Paid: 500 + 300 = 800
+        inv_p1 = Invoice.objects.create(
+            invoice_number="INV-MIX-P1",
+            customer=self.customer,
+            total_amount=Decimal('500.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv_p1.id).update(created_at=self.target_date)
+
+        inv_p2 = Invoice.objects.create(
+            invoice_number="INV-MIX-P2",
+            customer=self.customer,
+            total_amount=Decimal('300.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv_p2.id).update(created_at=self.target_date)
+
+        # Unpaid: 200
+        inv_u = Invoice.objects.create(
+            invoice_number="INV-MIX-U1",
+            customer=self.customer,
+            total_amount=Decimal('200.00'),
+            payment_status="unpaid"
+        )
+        Invoice.objects.filter(id=inv_u.id).update(created_at=self.target_date)
+
+        # Pending: 150
+        inv_pen = Invoice.objects.create(
+            invoice_number="INV-MIX-PEN",
+            customer=self.customer,
+            total_amount=Decimal('150.00'),
+            payment_status="pending"
+        )
+        Invoice.objects.filter(id=inv_pen.id).update(created_at=self.target_date)
+
+        # Failed: 100
+        inv_f = Invoice.objects.create(
+            invoice_number="INV-MIX-F1",
+            customer=self.customer,
+            total_amount=Decimal('100.00'),
+            payment_status="failed"
+        )
+        Invoice.objects.filter(id=inv_f.id).update(created_at=self.target_date)
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        # Total invoices = 2 paid + 1 unpaid + 1 pending + 1 failed = 5
+        self.assertEqual(resp.context['total_invoices'], 5)
+        # Collected amount = 500 + 300 = 800 (unpaid, pending, and failed excluded)
+        self.assertEqual(resp.context['total_amount_collected'], Decimal('800.00'))
+        self.assertContains(resp, "800.00")
+
+    def test_frontend_summary_cards_rendered(self):
+        """Verify summary cards for Total Invoices and Total Amount Collected are rendered above records."""
+        self.authenticate_admin()
+        inv = Invoice.objects.create(
+            invoice_number="INV-CARD-TEST",
+            customer=self.customer,
+            total_amount=Decimal('1250.75'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv.id).update(created_at=self.target_date)
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+
+        # Check card labels and currency formatting
+        self.assertIn("Total Invoices", content)
+        self.assertIn("Total Amount Collected", content)
+        self.assertIn("₹", content)
+        self.assertIn("1250.75", content)
+
+
+
 
 
 

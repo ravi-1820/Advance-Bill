@@ -796,16 +796,24 @@ def get_filtered_report_data(request):
         )
 
     # Calculate aggregate metrics directly from database
+    # A. Total Number of Invoices within selected date range
     total_invoices = qs.count()
-    sales_agg = qs.aggregate(total_sales=Sum('total_amount'))
-    total_sales = sales_agg['total_sales'] or Decimal('0.00')
+
+    # B. Total Amount Collected: include only successfully collected/paid amounts
+    # Exclude pending, failed, and unpaid invoices from collected amounts
+    paid_qs = qs.filter(payment_status__iexact='paid')
+    collected_agg = paid_qs.aggregate(total_collected=Sum('total_amount'))
+    total_amount_collected = collected_agg['total_collected'] or Decimal('0.00')
+
+    # Total sales (gross transaction value across paid invoices)
+    total_sales = total_amount_collected
 
     # Total units sold across all invoice items in filtered invoices
     units_agg = InvoiceItem.objects.filter(invoice__in=qs).aggregate(total_units=Sum('quantity'))
     total_units_sold = units_agg['total_units'] or 0
 
     total_products = Product.objects.count()
-    avg_invoice_val = (total_sales / total_invoices) if total_invoices > 0 else Decimal('0.00')
+    avg_invoice_val = (total_amount_collected / total_invoices) if total_invoices > 0 else Decimal('0.00')
 
     # Product-wise sales performance
     product_sales = list(InvoiceItem.objects.filter(invoice__in=qs).values(
@@ -820,6 +828,7 @@ def get_filtered_report_data(request):
     return {
         'qs': qs,
         'total_invoices': total_invoices,
+        'total_amount_collected': total_amount_collected,
         'total_sales': total_sales,
         'total_units_sold': total_units_sold,
         'total_products': total_products,
@@ -868,6 +877,7 @@ def admin_reports(request):
             'user': user,
             'invoices': invoices,
             'total_invoices': data['total_invoices'],
+            'total_amount_collected': data['total_amount_collected'],
             'total_sales': data['total_sales'],
             'total_units_sold': data['total_units_sold'],
             'total_products': data['total_products'],
@@ -915,6 +925,7 @@ def admin_reports_pdf(request):
             'admin': user,
             'invoices': data['qs'][:100],  # Limit to 100 in printable PDF to prevent excessive page counts
             'total_invoices': data['total_invoices'],
+            'total_amount_collected': data['total_amount_collected'],
             'total_sales': data['total_sales'],
             'total_units_sold': data['total_units_sold'],
             'total_products': data['total_products'],
