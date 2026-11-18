@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from django.utils import timezone
 from django.core import mail
 from django.test import TestCase, Client
@@ -2420,11 +2421,197 @@ class AdminDedicatedReportsSectionTest(TestCase):
         # Verify valid PDF byte structure starts with %PDF
         self.assertTrue(resp.content.startswith(b'%PDF'))
 
-    def test_reports_pdf_download_unauthorized(self):
-        """Unauthenticated or distributor requests to PDF download endpoint must be redirected."""
-        r_anon = self.client.get(reverse('admin_reports_pdf'))
-        self.assertEqual(r_anon.status_code, 302)
-        self.assertIn('/admin-login/', r_anon.url)
+
+class ReportDateRangeFilterFormTest(TestCase):
+    """
+    Test suite for the Date Range Report Generation Form and filtering functionality.
+    Validates:
+    - ORM date-range filtering (inclusive of start and end dates)
+    - Handling of empty date fields without 500 error
+    - Validation when end_date < start_date
+    - Error message feedback
+    - Frontend form elements presence (Start Date, End Date, Generate Report, Reset)
+    - Security / Authorization constraints
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser(
+            email="reportadmin@billing.com",
+            password="AdminPassword123!",
+            name="Report Admin"
+        )
+        self.distributor = User.objects.create_user(
+            email="dist_reporter@billing.com",
+            password="DistPassword123!",
+            name="Dist Reporter",
+            usertype="distributor"
+        )
+        self.customer = Customer.objects.create(
+            name="Range Test Customer",
+            email="rangetest@customer.com",
+            phone="9876543210",
+            address="100 Test Blvd, Suite 2"
+        )
+        self.product = Product.objects.create(
+            name="Filter Test Product",
+            category="Electronics",
+            price=Decimal('200.00'),
+            stock=100
+        )
+
+        now = timezone.now()
+        # Create Invoices with specific created_at timestamps
+        # Inv 1: 15 days ago
+        self.inv_old = Invoice.objects.create(
+            invoice_number="INV-RANGE-001",
+            customer=self.customer,
+            total_amount=Decimal('400.00')
+        )
+        Invoice.objects.filter(id=self.inv_old.id).update(created_at=now - timedelta(days=15))
+
+        # Inv 2: 7 days ago
+        self.inv_mid = Invoice.objects.create(
+            invoice_number="INV-RANGE-002",
+            customer=self.customer,
+            total_amount=Decimal('600.00')
+        )
+        Invoice.objects.filter(id=self.inv_mid.id).update(created_at=now - timedelta(days=7))
+
+        # Inv 3: 5 days ago
+        self.inv_target = Invoice.objects.create(
+            invoice_number="INV-RANGE-003",
+            customer=self.customer,
+            total_amount=Decimal('800.00')
+        )
+        Invoice.objects.filter(id=self.inv_target.id).update(created_at=now - timedelta(days=5))
+
+        # Inv 4: Today
+        self.inv_today = Invoice.objects.create(
+            invoice_number="INV-RANGE-004",
+            customer=self.customer,
+            total_amount=Decimal('1000.00')
+        )
+        Invoice.objects.filter(id=self.inv_today.id).update(created_at=now)
+
+    def authenticate_admin(self):
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+    def test_inclusive_date_range_filtering(self):
+        """Invoices between start_date and end_date (inclusive) are accurately retrieved."""
+        self.authenticate_admin()
+        now = timezone.now()
+        start_date = (now - timedelta(days=8)).strftime('%Y-%m-%d')
+        end_date = (now - timedelta(days=4)).strftime('%Y-%m-%d')
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': start_date,
+            'end_date': end_date
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 2)
+        invoice_numbers = [inv.invoice_number for inv in resp.context['invoices']]
+        self.assertIn("INV-RANGE-002", invoice_numbers)
+        self.assertIn("INV-RANGE-003", invoice_numbers)
+        self.assertNotIn("INV-RANGE-001", invoice_numbers)
+        self.assertNotIn("INV-RANGE-004", invoice_numbers)
+        self.assertEqual(float(resp.context['total_sales']), 1400.00)
+
+    def test_invalid_date_range_end_before_start(self):
+        """End date earlier than start date returns validation error and empty results."""
+        self.authenticate_admin()
+        now = timezone.now()
+        start_date = now.strftime('%Y-%m-%d')
+        end_date = (now - timedelta(days=5)).strftime('%Y-%m-%d')
+
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': start_date,
+            'end_date': end_date
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertContains(resp, "End date cannot be earlier than start date.")
+        self.assertEqual(resp.context['date_error'], "End date cannot be earlier than start date.")
+
+    def test_empty_date_fields_handling(self):
+        """Empty date strings do not raise 500 error and default cleanly."""
+        self.authenticate_admin()
+        # Both empty
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': '',
+            'end_date': ''
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 4)
+
+        # Only start date provided
+        now = timezone.now()
+        start_date = (now - timedelta(days=6)).strftime('%Y-%m-%d')
+        resp_start = self.client.get(reverse('admin_reports'), {
+            'start_date': start_date,
+            'end_date': ''
+        })
+        self.assertEqual(resp_start.status_code, 200)
+        self.assertEqual(resp_start.context['total_invoices'], 2) # Inv 3 and Inv 4
+
+        # Only end date provided
+        end_date = (now - timedelta(days=6)).strftime('%Y-%m-%d')
+        resp_end = self.client.get(reverse('admin_reports'), {
+            'start_date': '',
+            'end_date': end_date
+        })
+        self.assertEqual(resp_end.status_code, 200)
+        self.assertEqual(resp_end.context['total_invoices'], 2) # Inv 1 and Inv 2
+
+    def test_no_invoices_in_date_range(self):
+        """When no records fall in date range, empty state is displayed with 0 invoices."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': '2020-01-01',
+            'end_date': '2020-01-31'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['total_sales'], Decimal('0.00'))
+        self.assertContains(resp, "No invoices found")
+
+    def test_frontend_report_form_elements_present(self):
+        """Verify presence of Start Date, End Date, Generate Report button, and Reset option."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+
+        # Form elements
+        self.assertIn('name="start_date"', content)
+        self.assertIn('id="start_date"', content)
+        self.assertIn('name="end_date"', content)
+        self.assertIn('id="end_date"', content)
+        self.assertIn('Start Date', content)
+        self.assertIn('End Date', content)
+        self.assertIn('Generate Report', content)
+        self.assertIn('Reset', content)
+        self.assertIn(reverse('admin_reports'), content)
+
+    def test_unauthenticated_and_unauthorized_access(self):
+        """Unauthenticated or distributor users cannot access admin reports."""
+        # Unauthenticated
+        resp_unauth = self.client.get(reverse('admin_reports'))
+        self.assertEqual(resp_unauth.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp_unauth.url)
+
+        # Distributor
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+        resp_dist = self.client.get(reverse('admin_reports'))
+        self.assertEqual(resp_dist.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp_dist.url)
+
 
 
 

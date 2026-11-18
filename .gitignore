@@ -73,7 +73,7 @@ local_settings.py
 celerybeat-schedule
 celerybeat.pid
 
-# Testing and code coverage
+# Testing, type checking, and code coverage
 .tox/
 .nox/
 .coverage
@@ -85,6 +85,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 htmlcov/
 
 # IDE, Editor, and AI Workspace configurations
@@ -94,9 +96,26 @@ htmlcov/
 *.sublime-project
 *.sublime-workspace
 *.code-workspace
+.cursor/
 .gemini/
 .claude/
 .copilot/
+.antigravity/
+.fleet/
+
+# Node & Frontend Build artifacts (if applicable)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generated PDF Exports & Documents
+reports/*.pdf
+exports/*.pdf
+*.pdf
+!**/static/**/*.pdf
+!**/fixtures/**/*.pdf
 
 # Operating System files & Desktop artifacts
 .DS_Store

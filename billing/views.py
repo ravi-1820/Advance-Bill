@@ -710,8 +710,10 @@ def get_filtered_report_data(request):
     """
     Helper function to filter invoices and compute report metrics based on preset or custom date range.
     Supported presets: 'all', 'today', 'week', 'month', 'custom'.
+    Validates that the end date cannot be earlier than the start date.
+    Includes both the start date (00:00:00) and end date (23:59:59.999999) inclusively.
     """
-    preset = request.GET.get('preset', 'all').strip().lower()
+    preset = request.GET.get('preset', '').strip().lower()
     start_date_str = request.GET.get('start_date', '').strip()
     end_date_str = request.GET.get('end_date', '').strip()
     search = request.GET.get('search', '').strip()
@@ -719,46 +721,74 @@ def get_filtered_report_data(request):
     now = timezone.now()
     start_dt = None
     end_dt = None
-    active_filter_label = "All Time"
+    date_error = None
+    active_filter_label = "All Invoices"
 
-    if preset == 'today':
+    # 1. Custom Date Range Validation & Processing
+    if start_date_str or end_date_str:
+        preset = 'custom'
+        d_start = None
+        d_end = None
+
+        if start_date_str:
+            try:
+                d_start = datetime.strptime(start_date_str, '%Y-%m-%d')
+                start_dt = timezone.make_aware(d_start.replace(hour=0, minute=0, second=0, microsecond=0))
+            except (ValueError, TypeError):
+                date_error = "Invalid start date format. Please use YYYY-MM-DD."
+                messages.error(request, date_error)
+
+        if end_date_str:
+            try:
+                d_end = datetime.strptime(end_date_str, '%Y-%m-%d')
+                end_dt = timezone.make_aware(d_end.replace(hour=23, minute=59, second=59, microsecond=999999))
+            except (ValueError, TypeError):
+                date_error = "Invalid end date format. Please use YYYY-MM-DD."
+                messages.error(request, date_error)
+
+        if not date_error:
+            if d_start and d_end:
+                if d_start > d_end:
+                    date_error = "End date cannot be earlier than start date."
+                    messages.error(request, date_error)
+                    start_dt = None
+                    end_dt = None
+                    active_filter_label = "Invalid Date Range"
+                else:
+                    active_filter_label = f"{start_date_str} to {end_date_str}"
+            elif start_date_str:
+                active_filter_label = f"From {start_date_str}"
+            elif end_date_str:
+                active_filter_label = f"Up to {end_date_str}"
+
+    # 2. Preset Range Processing
+    elif preset == 'today':
         start_dt = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_dt = now.replace(hour=23, minute=59, second=59, microsecond=999999)
         active_filter_label = "Today"
     elif preset == 'week':
         start_dt = now - timedelta(days=7)
         end_dt = now
-        active_filter_label = "Last 7 Days"
+        active_filter_label = "This Week"
     elif preset == 'month':
         start_dt = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end_dt = now
         active_filter_label = "This Month"
-    elif preset == 'custom' or (start_date_str and end_date_str):
-        preset = 'custom'
-        try:
-            if start_date_str:
-                d_start = datetime.strptime(start_date_str, '%Y-%m-%d')
-                start_dt = timezone.make_aware(d_start.replace(hour=0, minute=0, second=0))
-            if end_date_str:
-                d_end = datetime.strptime(end_date_str, '%Y-%m-%d')
-                end_dt = timezone.make_aware(d_end.replace(hour=23, minute=59, second=59, microsecond=999999))
-            active_filter_label = f"{start_date_str} to {end_date_str}"
-        except (ValueError, TypeError):
-            preset = 'all'
-            start_dt = None
-            end_dt = None
-            active_filter_label = "All Time"
     else:
         preset = 'all'
+        active_filter_label = "All Invoices"
 
-    qs = Invoice.objects.all().select_related('customer').prefetch_related('items__product').order_by('-id')
+    # 3. Database Querying via Django ORM
+    if date_error:
+        qs = Invoice.objects.none()
+    else:
+        qs = Invoice.objects.all().select_related('customer').prefetch_related('items__product').order_by('-id')
+        if start_dt:
+            qs = qs.filter(created_at__gte=start_dt)
+        if end_dt:
+            qs = qs.filter(created_at__lte=end_dt)
 
-    if start_dt:
-        qs = qs.filter(created_at__gte=start_dt)
-    if end_dt:
-        qs = qs.filter(created_at__lte=end_dt)
-
-    if search:
+    if search and not date_error:
         qs = qs.filter(
             Q(invoice_number__icontains=search) |
             Q(customer__name__icontains=search) |
@@ -800,6 +830,7 @@ def get_filtered_report_data(request):
         'end_date': end_date_str,
         'search': search,
         'active_filter_label': active_filter_label,
+        'date_error': date_error,
     }
 
 
@@ -847,6 +878,7 @@ def admin_reports(request):
             'end_date': data['end_date'],
             'search': data['search'],
             'active_filter_label': data['active_filter_label'],
+            'date_error': data.get('date_error'),
             'generated_at': timezone.now(),
         }
         return render(request, 'billing/admin-reports.html', context)

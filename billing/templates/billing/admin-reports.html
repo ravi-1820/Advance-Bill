@@ -430,6 +430,15 @@
             flex-wrap: wrap;
         }
 
+        .date-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
         .date-input {
             height: 36px;
             background: var(--card-elevated);
@@ -676,6 +685,24 @@
             </div>
         </div>
 
+        <!-- Django Feedback Messages / Validation Errors -->
+        {% if messages %}
+        <div style="margin-bottom: 1.25rem;">
+            {% for message in messages %}
+            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);{% else %}background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2);{% endif %}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    {% if message.tags == 'error' %}
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    {% else %}
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    {% endif %}
+                </svg>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <!-- Filter Bar Card -->
         <div class="filter-card">
             <div class="filter-row">
@@ -696,16 +723,20 @@
                 </div>
             </div>
 
-            <!-- Custom Date Range & Search Form -->
+            <!-- Report Generation Form (Date Range & Search) -->
             <form method="GET" action="{% url 'admin_reports' %}" class="filter-row" style="margin-top: 4px;">
                 <input type="hidden" name="preset" value="custom">
 
                 <div class="custom-filter-form">
-                    <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Custom Range:</span>
-                    <input type="date" name="start_date" class="date-input" value="{{ start_date }}" placeholder="Start Date">
-                    <span style="color: var(--text-muted); font-size: 0.8rem;">to</span>
-                    <input type="date" name="end_date" class="date-input" value="{{ end_date }}" placeholder="End Date">
-                    <button type="submit" class="btn-shadcn btn-secondary btn-sm">Apply Dates</button>
+                    <label for="start_date" class="date-label">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" class="date-input" value="{{ start_date }}" placeholder="Start Date">
+                    <label for="end_date" class="date-label">End Date</label>
+                    <input type="date" id="end_date" name="end_date" class="date-input" value="{{ end_date }}" placeholder="End Date">
+                    <button type="submit" class="btn-shadcn btn-primary btn-sm">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <span>Generate Report</span>
+                    </button>
+                    <a href="{% url 'admin_reports' %}" class="btn-shadcn btn-outline btn-sm">Reset</a>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end;">
@@ -714,9 +745,6 @@
                         <input type="text" name="search" class="form-input" placeholder="Search by Invoice # or Customer..." value="{{ search }}">
                     </div>
                     <button type="submit" class="btn-shadcn btn-secondary btn-sm">Search</button>
-                    {% if preset != 'all' or start_date or end_date or search %}
-                        <a href="{% url 'admin_reports' %}" class="btn-shadcn btn-outline btn-sm">Reset</a>
-                    {% endif %}
                 </div>
             </form>
         </div>
