@@ -1,5 +1,7 @@
+import io
 from datetime import timedelta
 from decimal import Decimal
+from pypdf import PdfReader
 from django.utils import timezone
 from django.core import mail
 from django.test import TestCase, Client
@@ -2417,7 +2419,7 @@ class AdminDedicatedReportsSectionTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
         self.assertIn('attachment;', resp['Content-Disposition'])
-        self.assertIn('Admin_Sales_Report_all_', resp['Content-Disposition'])
+        self.assertIn('Invoice_Report_', resp['Content-Disposition'])
         # Verify valid PDF byte structure starts with %PDF
         self.assertTrue(resp.content.startswith(b'%PDF'))
 
@@ -2848,6 +2850,218 @@ class DateRangeInvoiceCountAndCollectedAmountTest(TestCase):
         self.assertIn("Total Amount Collected", content)
         self.assertIn("₹", content)
         self.assertIn("1250.75", content)
+
+
+class DateRangeReportPDFDownloadTest(TestCase):
+    """
+    Test suite for Task 3: Download Generated Report as PDF using xhtml2pdf.
+    Tests:
+    - Download PDF with a valid date range and multiple invoices.
+    - PDF contains header details (business name, Report Title: Invoice Report, dates).
+    - PDF contains summary section (Total Invoices, Total Amount Collected).
+    - PDF contains invoice details table (Sr. No, Invoice #, Customer, Date, Amount, Status).
+    - Download PDF when no invoices are available (renders empty-state message).
+    - Unpaid and failed invoices excluded from collected amount in PDF.
+    - Preserves selected date range query parameters in download button.
+    - Security and authorization (anonymous and distributor redirected).
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser(
+            email="pdf.admin@billing.com",
+            password="AdminPassword123!",
+            name="PDF Report Admin",
+            company_name="Advance Billing Tech"
+        )
+        self.distributor = User.objects.create_user(
+            email="pdf.dist@billing.com",
+            password="DistPassword123!",
+            name="PDF Distributor",
+            usertype="distributor"
+        )
+        self.customer = Customer.objects.create(
+            name="Global Enterprises Ltd",
+            email="global@corp.com",
+            phone="9823456789",
+            address="789 Industrial Area, Tech Park"
+        )
+
+        self.now = timezone.now()
+        self.target_date = self.now - timedelta(days=2)
+        self.start_str = (self.target_date - timedelta(days=1)).strftime('%Y-%m-%d')
+        self.end_str = (self.target_date + timedelta(days=1)).strftime('%Y-%m-%d')
+
+    def authenticate_admin(self):
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+    def test_download_pdf_valid_date_range_multiple_invoices(self):
+        """Valid date range PDF download returns valid binary PDF with expected content and headers."""
+        self.authenticate_admin()
+        # Create 2 invoices in range
+        inv1 = Invoice.objects.create(
+            invoice_number="INV-PDF-101",
+            customer=self.customer,
+            total_amount=Decimal('1500.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv1.id).update(created_at=self.target_date)
+
+        inv2 = Invoice.objects.create(
+            invoice_number="INV-PDF-102",
+            customer=self.customer,
+            total_amount=Decimal('850.50'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv2.id).update(created_at=self.target_date)
+
+        # 1 invoice outside range
+        inv_outside = Invoice.objects.create(
+            invoice_number="INV-PDF-OUTSIDE",
+            customer=self.customer,
+            total_amount=Decimal('9999.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv_outside.id).update(created_at=self.now - timedelta(days=25))
+
+        resp = self.client.get(reverse('admin_reports_pdf'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('attachment;', resp['Content-Disposition'])
+        self.assertIn('Invoice_Report_', resp['Content-Disposition'])
+
+        # Verify PDF starts with %PDF magic bytes
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+        # Inspect generated PDF text using pypdf
+        reader = PdfReader(io.BytesIO(resp.content))
+        self.assertGreater(len(reader.pages), 0)
+        extracted_text = ""
+        for page in reader.pages:
+            extracted_text += page.extract_text() or ""
+
+        # Verify Header Section
+        self.assertIn("Invoice Report", extracted_text)
+        self.assertIn(self.start_str, extracted_text)
+        self.assertIn(self.end_str, extracted_text)
+
+        # Verify Summary Section
+        self.assertIn("2", extracted_text) # total_invoices = 2
+        self.assertIn("2350.50", extracted_text) # 1500.00 + 850.50 = 2350.50
+
+        # Verify Invoice Details Table
+        self.assertIn("INV-PDF-101", extracted_text)
+        self.assertIn("INV-PDF-102", extracted_text)
+        self.assertNotIn("INV-PDF-OUTSIDE", extracted_text)
+        self.assertIn("Global Enterprises Ltd", extracted_text)
+        self.assertIn("Paid", extracted_text)
+
+    def test_download_pdf_empty_results_renders_clean_message(self):
+        """When date range has 0 invoices, PDF still renders cleanly with empty message."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports_pdf'), {
+            'start_date': '2021-01-01',
+            'end_date': '2021-01-05'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+        reader = PdfReader(io.BytesIO(resp.content))
+        extracted_text = ""
+        for page in reader.pages:
+            extracted_text += page.extract_text() or ""
+
+        self.assertIn("Invoice Report", extracted_text)
+        self.assertIn("No invoice records found", extracted_text)
+        self.assertIn("0.00", extracted_text)
+
+    def test_download_pdf_unpaid_and_failed_excluded_from_collected_amount(self):
+        """Unpaid and failed payments in range are listed in table but excluded from summary collected amount in PDF."""
+        self.authenticate_admin()
+        inv_paid = Invoice.objects.create(
+            invoice_number="INV-PDF-PAID",
+            customer=self.customer,
+            total_amount=Decimal('600.00'),
+            payment_status="paid"
+        )
+        Invoice.objects.filter(id=inv_paid.id).update(created_at=self.target_date)
+
+        inv_unpaid = Invoice.objects.create(
+            invoice_number="INV-PDF-UNPAID",
+            customer=self.customer,
+            total_amount=Decimal('400.00'),
+            payment_status="unpaid"
+        )
+        Invoice.objects.filter(id=inv_unpaid.id).update(created_at=self.target_date)
+
+        inv_failed = Invoice.objects.create(
+            invoice_number="INV-PDF-FAILED",
+            customer=self.customer,
+            total_amount=Decimal('300.00'),
+            payment_status="failed"
+        )
+        Invoice.objects.filter(id=inv_failed.id).update(created_at=self.target_date)
+
+        resp = self.client.get(reverse('admin_reports_pdf'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+
+        reader = PdfReader(io.BytesIO(resp.content))
+        extracted_text = ""
+        for page in reader.pages:
+            extracted_text += page.extract_text() or ""
+
+        # Total count = 3
+        self.assertIn("3", extracted_text)
+        # Total collected = 600.00 (400 and 300 excluded)
+        self.assertIn("600.00", extracted_text)
+        self.assertNotIn("1300.00", extracted_text)
+        # Table lists all 3 with statuses
+        self.assertIn("INV-PDF-PAID", extracted_text)
+        self.assertIn("INV-PDF-UNPAID", extracted_text)
+        self.assertIn("INV-PDF-FAILED", extracted_text)
+
+    def test_frontend_download_pdf_button_preserves_date_range(self):
+        """Frontend Reports view provides Download PDF button preserving start_date and end_date."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'start_date': self.start_str,
+            'end_date': self.end_str
+        })
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+
+        # Check button label and preserved parameters
+        self.assertIn("Download PDF", content)
+        self.assertIn(f"start_date={self.start_str}", content)
+        self.assertIn(f"end_date={self.end_str}", content)
+        self.assertIn(reverse('admin_reports_pdf'), content)
+
+    def test_pdf_endpoint_access_restrictions(self):
+        """Unauthenticated and non-admin users cannot download reports PDF."""
+        # Unauthenticated
+        resp_anon = self.client.get(reverse('admin_reports_pdf'))
+        self.assertEqual(resp_anon.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp_anon.url)
+
+        # Distributor
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+        resp_dist = self.client.get(reverse('admin_reports_pdf'))
+        self.assertEqual(resp_dist.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp_dist.url)
+
 
 
 

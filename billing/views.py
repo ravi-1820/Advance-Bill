@@ -899,8 +899,8 @@ def admin_reports(request):
 
 def admin_reports_pdf(request):
     """
-    Generate and download professional PDF export of the filtered sales reports.
-    Reuses project PDF engine (pisa / xhtml2pdf).
+    Generate and download professional PDF export of the filtered Invoice Report.
+    Uses xhtml2pdf (pisa) for PDF generation based on selected Start Date and End Date.
     Restricted strictly to Administrator users.
     """
     try:
@@ -923,7 +923,8 @@ def admin_reports_pdf(request):
 
         context = {
             'admin': user,
-            'invoices': data['qs'][:100],  # Limit to 100 in printable PDF to prevent excessive page counts
+            'business_name': getattr(user, 'company_name', None) or "Advance Billing System with QR",
+            'invoices': data['qs'],
             'total_invoices': data['total_invoices'],
             'total_amount_collected': data['total_amount_collected'],
             'total_sales': data['total_sales'],
@@ -931,6 +932,8 @@ def admin_reports_pdf(request):
             'total_products': data['total_products'],
             'avg_invoice_value': data['avg_invoice_val'],
             'product_sales': data['product_sales'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
             'active_filter_label': data['active_filter_label'],
             'generated_at': timezone.now(),
         }
@@ -940,13 +943,15 @@ def admin_reports_pdf(request):
         pdf_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
 
         if pdf_status.err:
-            return HttpResponse('Error generating Reports PDF', status=500)
+            return HttpResponse('Error generating Invoice Report PDF', status=500)
 
         pdf_data = buffer.getvalue()
         buffer.close()
 
+        start_slug = data['start_date'].replace('-', '') if data['start_date'] else 'all'
+        end_slug = data['end_date'].replace('-', '') if data['end_date'] else 'all'
         timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"Admin_Sales_Report_{data['preset']}_{timestamp_str}.pdf"
+        filename = f"Invoice_Report_{start_slug}_{end_slug}_{timestamp_str}.pdf"
 
         response = HttpResponse(pdf_data, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

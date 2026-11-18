@@ -115,6 +115,7 @@ pnpm-debug.log*
 # Generated PDF Exports & Documents
 reports/*.pdf
 exports/*.pdf
+*Invoice_Report_*.pdf
 *.pdf
 !**/static/**/*.pdf
 !**/fixtures/**/*.pdf
