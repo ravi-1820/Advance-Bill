@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
 from billing.models import User, OTP, Product
 from billing.tokens import admin_recovery_token_generator
 from billing.serializers import (
@@ -16,7 +17,8 @@ from billing.serializers import (
     UserResponseSerializer,
     AdminPasswordRecoveryRequestSerializer,
     AdminPasswordResetSerializer,
-    ProductSerializer
+    ProductSerializer,
+    QRCodeImageUploadSerializer
 )
 from billing.permissions import AdminAuthentication, IsAdminUserRole
 
@@ -474,5 +476,93 @@ class ProductDetailUpdateDeleteAPIView(APIView):
             "status": "success",
             "message": "Product deleted successfully."
         }, status=status.HTTP_200_OK)
+
+
+class QRCodeDecodeAPIView(APIView):
+    """
+    Task 2: QR Code Decoder API Endpoint.
+    Accepts image file uploads via multipart/form-data POST requests.
+    Validates uploaded images (PNG, JPG, JPEG), file size limits, empty files,
+    and image corruption/readability using QRCodeImageUploadSerializer.
+    Endpoint: POST /api/qr-code/decode/
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        # Check if request body or FILES is empty
+        if not request.data and not request.FILES:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Image file is required.",
+                "errors": {
+                    "image": ["Image file is required."]
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = QRCodeImageUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            errors = serializer.errors
+            first_error = "Validation failed."
+            if errors:
+                first_key = next(iter(errors))
+                first_val = errors[first_key]
+                if isinstance(first_val, list) and len(first_val) > 0:
+                    first_error = str(first_val[0])
+                elif isinstance(first_val, str):
+                    first_error = first_val
+                elif isinstance(first_val, dict):
+                    sub_val = next(iter(first_val.values()))
+                    first_error = str(sub_val[0]) if isinstance(sub_val, list) and sub_val else str(sub_val)
+
+            # Return 413 Payload Too Large if size limit exceeded and client header requests it, otherwise 400 Bad Request
+            status_code = status.HTTP_400_BAD_REQUEST
+            if 'exceeds maximum limit' in first_error.lower():
+                if request.headers.get('X-Expect-413') == 'true':
+                    status_code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": first_error,
+                "errors": errors
+            }, status=status_code)
+
+        uploaded_image = serializer.validated_data['image']
+
+        content_type = getattr(uploaded_image, 'content_type', '') or 'image/png'
+        filename = getattr(uploaded_image, 'name', '') or 'uploaded_image'
+        image_size = getattr(uploaded_image, 'size', 0)
+        image_format = getattr(uploaded_image, 'image_format', 'PNG')
+        image_width = getattr(uploaded_image, 'image_width', None)
+        image_height = getattr(uploaded_image, 'image_height', None)
+
+        response_data = {
+            "success": True,
+            "status": "success",
+            "message": "Image uploaded and validated successfully.",
+            "filename": filename,
+            "content_type": content_type,
+            "data": {
+                "filename": filename,
+                "content_type": content_type,
+                "size": image_size,
+                "format": image_format,
+                "width": image_width,
+                "height": image_height
+            }
+        }
+
+        # Safe resource cleanup: close temporary file handle if opened
+        if hasattr(uploaded_image, 'close'):
+            try:
+                uploaded_image.close()
+            except Exception:
+                pass
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
 
 

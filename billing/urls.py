@@ -16,6 +16,8 @@ urlpatterns = [
     path('api/admin/verify-otp/', api_views.AdminOTPVerificationAPIView.as_view(), name='api_admin_verify_otp'),
     path('api/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_password_reset'),
     path('api/admin/password-reset/', api_views.AdminPasswordResetAPIView.as_view(), name='api_admin_password_reset'),
+    path('api/qr-code/decode/', api_views.QRCodeDecodeAPIView.as_view(), name='api_qr_code_decode'),
+    path('api/qr/decode/', api_views.QRCodeDecodeAPIView.as_view(), name='api_qr_decode'),
 
     path('', views.index, name='index'),
     path('index/', views.index, name='index_alt'),

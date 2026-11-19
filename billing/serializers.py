@@ -1,4 +1,6 @@
+import os
 import random
+from PIL import Image
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -354,3 +356,82 @@ class AdminPasswordResetSerializer(serializers.Serializer):
         user.save()
         return user
 
+
+class QRCodeImageUploadSerializer(serializers.Serializer):
+    """
+    Task 2: Serializer for QR Code Decoder image uploads.
+    Enforces image presence, format constraints (PNG, JPG, JPEG),
+    empty file rejection, maximum file size limit (5MB),
+    and validates image integrity using Pillow (PIL).
+    """
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    ALLOWED_EXTENSIONS = ('.png', '.jpg', '.jpeg')
+    ALLOWED_CONTENT_TYPES = ('image/png', 'image/jpeg', 'image/pjpeg', 'image/x-png', 'image/jpg')
+
+    image = serializers.FileField(
+        required=True,
+        allow_empty_file=False,
+        error_messages={
+            'required': 'Image file is required.',
+            'blank': 'Image file is required.',
+            'null': 'Image file is required.',
+            'empty': 'Uploaded image file is empty.'
+        }
+    )
+
+    def validate_image(self, file):
+        # 1. Non-empty file validation
+        if not file or file.size == 0:
+            raise serializers.ValidationError("Uploaded image file is empty.")
+
+        # 2. Maximum file size validation (5 MB)
+        if file.size > self.MAX_FILE_SIZE:
+            max_mb = self.MAX_FILE_SIZE // (1024 * 1024)
+            raise serializers.ValidationError(f"Image file size exceeds maximum limit of {max_mb} MB.")
+
+        # 3. File extension validation
+        filename = getattr(file, 'name', '') or ''
+        ext = os.path.splitext(filename)[1].lower()
+        if not ext or ext not in self.ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"Unsupported file format '{ext or 'unknown'}'. Only PNG, JPG, and JPEG images are supported."
+            )
+
+        # 4. Content-Type validation (if sent by client)
+        content_type = getattr(file, 'content_type', '')
+        if content_type and content_type.lower() not in self.ALLOWED_CONTENT_TYPES:
+            raise serializers.ValidationError(
+                f"Unsupported Content-Type '{content_type}'. Only image/png and image/jpeg are supported."
+            )
+
+        # 5. Image structure and integrity verification via Pillow (PIL)
+        try:
+            img = Image.open(file)
+            img.verify()
+
+            # Ensure image format detected by PIL is PNG or JPEG
+            pil_format = (img.format or '').upper()
+            if pil_format not in ('PNG', 'JPEG'):
+                raise serializers.ValidationError(
+                    f"Unsupported image format '{pil_format}'. Only PNG and JPEG images are supported."
+                )
+
+            file.image_format = pil_format
+        except serializers.ValidationError:
+            raise
+        except Exception:
+            raise serializers.ValidationError("Corrupted or unreadable image file.")
+        finally:
+            # Crucial: Reset file pointer after verify()
+            file.seek(0)
+
+        # Re-open safely to retrieve image dimensions
+        try:
+            with Image.open(file) as img_dim:
+                file.image_width, file.image_height = img_dim.size
+        except Exception:
+            file.image_width, file.image_height = None, None
+        finally:
+            file.seek(0)
+
+        return file

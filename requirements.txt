@@ -1,6 +1,6 @@
 # ==============================================================================
 # Advance Billing System with QR - Production & Development Requirements
-# Modules: Customer & Product Management, Invoicing, QR Codes, 
+# Modules: Customer & Product Management, Invoicing, QR Code Generation & Decoding API,
 #          Date-Range Reports Validation & Analytics, xhtml2pdf PDF Export
 # ==============================================================================
 
@@ -19,7 +19,7 @@ pycparser>=2.21
 asn1crypto>=1.5.0
 oscrypto>=1.3.0
 
-# Dynamic QR Code Generation (with PIL image rasterizer)
+# Dynamic QR Code Generation & Image Validation (with PIL image rasterizer)
 qrcode[pil]>=8.0
 pillow>=10.0.0
 

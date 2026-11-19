@@ -1,9 +1,12 @@
 import io
+from io import BytesIO
 from datetime import datetime, timedelta
 from decimal import Decimal
+from PIL import Image
 from pypdf import PdfReader
 from django.utils import timezone
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.urls import reverse
 from billing.models import User, Customer, Product, Invoice, InvoiceItem, OTP
@@ -3294,6 +3297,181 @@ class DateRangeValidationTask1Test(TestCase):
         self.assertIn('id="start_date"', content)
         self.assertIn('id="end_date"', content)
         self.assertIn('generateBtn.addEventListener', content)
+
+
+class QRCodeDecodeAPITest(TestCase):
+    """
+    Task 2: Test Suite for QR Code Decoder API Endpoint.
+    Tests image file acceptance, format restrictions, empty files, size limits,
+    corruption checks, and HTTP methods according to Task 2 specifications.
+    """
+
+    def setUp(self):
+        self.decode_url = reverse('api_qr_code_decode')
+        self.alt_decode_url = reverse('api_qr_decode')
+
+    def create_test_image(self, format='PNG', size=(120, 120), filename=None):
+        buffer = BytesIO()
+        img = Image.new('RGB', size, color='navy')
+        img.save(buffer, format=format)
+        buffer.seek(0)
+        ext = 'png' if format.upper() == 'PNG' else 'jpg'
+        name = filename or f'test_qr.{ext}'
+        content_type = 'image/png' if format.upper() == 'PNG' else 'image/jpeg'
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type=content_type)
+
+    def test_scenario_1_upload_valid_png(self):
+        """Scenario 1: Upload a valid PNG image file."""
+        image = self.create_test_image(format='PNG', filename='invoice_qr.png')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['message'], 'Image uploaded and validated successfully.')
+        self.assertEqual(data['filename'], 'invoice_qr.png')
+        self.assertEqual(data['content_type'], 'image/png')
+        self.assertEqual(data['data']['format'], 'PNG')
+        self.assertEqual(data['data']['width'], 120)
+        self.assertEqual(data['data']['height'], 120)
+
+    def test_scenario_2_upload_valid_jpg(self):
+        """Scenario 2: Upload a valid JPG image file."""
+        image = self.create_test_image(format='JPEG', filename='bill_qr.jpg')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['filename'], 'bill_qr.jpg')
+        self.assertEqual(data['content_type'], 'image/jpeg')
+        self.assertEqual(data['data']['format'], 'JPEG')
+
+    def test_scenario_3_upload_valid_jpeg(self):
+        """Scenario 3: Upload a valid JPEG image file."""
+        image = self.create_test_image(format='JPEG', filename='sample_qr.jpeg')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['filename'], 'sample_qr.jpeg')
+        self.assertEqual(data['content_type'], 'image/jpeg')
+        self.assertEqual(data['data']['format'], 'JPEG')
+
+    def test_scenario_4_submit_without_image(self):
+        """Scenario 4: Submit request without an image file."""
+        resp = self.client.post(self.decode_url, {}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['message'], 'Image file is required.')
+        self.assertIn('image', data['errors'])
+
+    def test_scenario_5_upload_pdf_file(self):
+        """Scenario 5: Upload an unsupported PDF file."""
+        pdf_file = SimpleUploadedFile(
+            'document.pdf',
+            b'%PDF-1.4 ... binary dummy pdf content ...',
+            content_type='application/pdf'
+        )
+        resp = self.client.post(self.decode_url, {'image': pdf_file}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('Unsupported', str(data['errors']['image']))
+
+    def test_scenario_6_upload_empty_file(self):
+        """Scenario 6: Upload an empty file (0 bytes)."""
+        empty_file = SimpleUploadedFile(
+            'empty_qr.png',
+            b'',
+            content_type='image/png'
+        )
+        resp = self.client.post(self.decode_url, {'image': empty_file}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('empty', str(data['errors']['image']).lower())
+
+    def test_scenario_7_upload_corrupted_image(self):
+        """Scenario 7: Upload a corrupted or malformed image file."""
+        corrupted_file = SimpleUploadedFile(
+            'corrupted.png',
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR...corrupted_payload_garbage_bytes',
+            content_type='image/png'
+        )
+        resp = self.client.post(self.decode_url, {'image': corrupted_file}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('Corrupted or unreadable image file', str(data['errors']['image']))
+
+    def test_scenario_8_upload_image_exceeding_size_limit(self):
+        """Scenario 8: Upload an image exceeding configured 5MB size limit."""
+        # 5MB + 1024 bytes
+        oversized_bytes = b'0' * (5 * 1024 * 1024 + 1024)
+        large_file = SimpleUploadedFile(
+            'oversized_qr.png',
+            oversized_bytes,
+            content_type='image/png'
+        )
+        resp = self.client.post(self.decode_url, {'image': large_file}, format='multipart')
+
+        self.assertIn(resp.status_code, [400, 413])
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('exceeds maximum limit', str(data['errors']['image']))
+
+    def test_scenario_9_submit_unsupported_http_method(self):
+        """Scenario 9: Submit request using unsupported HTTP methods (GET, PUT, DELETE)."""
+        get_resp = self.client.get(self.decode_url)
+        self.assertEqual(get_resp.status_code, 405)
+
+        put_resp = self.client.put(self.decode_url, {}, format='multipart')
+        self.assertEqual(put_resp.status_code, 405)
+
+        delete_resp = self.client.delete(self.decode_url)
+        self.assertEqual(delete_resp.status_code, 405)
+
+    def test_alias_url_endpoint(self):
+        """Verify the alias endpoint /api/qr/decode/ works identically."""
+        image = self.create_test_image(format='PNG', filename='alt_invoice.png')
+        resp = self.client.post(self.alt_decode_url, {'image': image}, format='multipart')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['filename'], 'alt_invoice.png')
+
+    def test_text_file_disguised_as_png(self):
+        """Reject non-image text files disguised with a .png file extension."""
+        disguised_file = SimpleUploadedFile(
+            'fake.png',
+            b'Hello world, this is a plain text file pretending to be an image.',
+            content_type='image/png'
+        )
+        resp = self.client.post(self.decode_url, {'image': disguised_file}, format='multipart')
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertIn('Corrupted or unreadable image file', str(data['errors']['image']))
+
 
 
 

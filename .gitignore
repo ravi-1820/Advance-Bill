@@ -51,6 +51,10 @@ uploads/
 /uploads/
 qr_codes/
 /qr_codes/
+qr_uploads/
+/qr_uploads/
+decoded_qr/
+/decoded_qr/
 
 # Environment variables & sensitive credentials
 .env
