@@ -51,10 +51,13 @@ uploads/
 /uploads/
 qr_codes/
 /qr_codes/
-qr_uploads/
-/qr_uploads/
-decoded_qr/
-/decoded_qr/
+
+# Temporary QR decoder image uploads (Task 2 - not stored permanently)
+tmp_uploads/
+/tmp_uploads/
+qr_tmp/
+/qr_tmp/
+*.tmp_qr_upload
 
 # Environment variables & sensitive credentials
 .env
