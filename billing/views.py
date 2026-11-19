@@ -725,41 +725,66 @@ def get_filtered_report_data(request):
     active_filter_label = "All Invoices"
 
     # 1. Custom Date Range Validation & Processing
-    if start_date_str or end_date_str:
+    is_custom_date_request = (
+        preset == 'custom' or
+        ('start_date' in request.GET and not preset) or
+        ('end_date' in request.GET and not preset) or
+        bool(start_date_str) or
+        bool(end_date_str)
+    )
+
+    if is_custom_date_request:
         preset = 'custom'
         d_start = None
         d_end = None
 
-        if start_date_str:
+        # Scenario 1 & 8: Both dates empty / missing
+        if not start_date_str and not end_date_str:
+            date_error = "Please select a Start Date."
+        # Scenario 2: Start Date empty
+        elif not start_date_str:
+            try:
+                datetime.strptime(end_date_str, '%Y-%m-%d')
+            except (ValueError, TypeError):
+                date_error = "Please enter a valid date."
+            if not date_error:
+                date_error = "Please select a Start Date."
+        # Scenario 3: End Date empty
+        elif not end_date_str:
+            try:
+                datetime.strptime(start_date_str, '%Y-%m-%d')
+            except (ValueError, TypeError):
+                date_error = "Please enter a valid date."
+            if not date_error:
+                date_error = "Please select an End Date."
+        else:
+            # Both dates provided - validate format (Scenario 7)
             try:
                 d_start = datetime.strptime(start_date_str, '%Y-%m-%d')
-                start_dt = timezone.make_aware(d_start.replace(hour=0, minute=0, second=0, microsecond=0))
             except (ValueError, TypeError):
-                date_error = "Invalid start date format. Please use YYYY-MM-DD."
-                messages.error(request, date_error)
+                date_error = "Please enter a valid date."
 
-        if end_date_str:
             try:
                 d_end = datetime.strptime(end_date_str, '%Y-%m-%d')
-                end_dt = timezone.make_aware(d_end.replace(hour=23, minute=59, second=59, microsecond=999999))
             except (ValueError, TypeError):
-                date_error = "Invalid end date format. Please use YYYY-MM-DD."
-                messages.error(request, date_error)
+                if not date_error:
+                    date_error = "Please enter a valid date."
 
-        if not date_error:
-            if d_start and d_end:
+            if not date_error:
+                # Scenario 4: End Date earlier than Start Date
                 if d_start > d_end:
-                    date_error = "End date cannot be earlier than start date."
-                    messages.error(request, date_error)
-                    start_dt = None
-                    end_dt = None
-                    active_filter_label = "Invalid Date Range"
+                    date_error = "End Date cannot be earlier than Start Date."
                 else:
+                    # Scenario 5 & 6: Start Date equal to End Date or valid range
+                    start_dt = timezone.make_aware(d_start.replace(hour=0, minute=0, second=0, microsecond=0))
+                    end_dt = timezone.make_aware(d_end.replace(hour=23, minute=59, second=59, microsecond=999999))
                     active_filter_label = f"{start_date_str} to {end_date_str}"
-            elif start_date_str:
-                active_filter_label = f"From {start_date_str}"
-            elif end_date_str:
-                active_filter_label = f"Up to {end_date_str}"
+
+        if date_error:
+            messages.error(request, date_error)
+            active_filter_label = "Invalid Date Range"
+            start_dt = None
+            end_dt = None
 
     # 2. Preset Range Processing
     elif preset == 'today':
@@ -920,6 +945,10 @@ def admin_reports_pdf(request):
             return redirect('admin_login')
 
         data = get_filtered_report_data(request)
+
+        if data.get('date_error'):
+            messages.error(request, data['date_error'])
+            return redirect('admin_reports')
 
         context = {
             'admin': user,

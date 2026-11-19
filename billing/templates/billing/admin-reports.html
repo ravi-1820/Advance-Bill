@@ -685,9 +685,19 @@
             </div>
         </div>
 
+        <!-- Frontend Client-Side Validation Alert Box -->
+        <div id="client-alert-box" style="display: none; margin-bottom: 1.25rem;">
+            <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span id="client-alert-text"></span>
+            </div>
+        </div>
+
         <!-- Django Feedback Messages / Validation Errors -->
         {% if messages %}
-        <div style="margin-bottom: 1.25rem;">
+        <div id="messages-container" style="margin-bottom: 1.25rem;">
             {% for message in messages %}
             <div style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2);{% else %}background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2);{% endif %}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -724,7 +734,7 @@
             </div>
 
             <!-- Report Generation Form (Date Range & Search) -->
-            <form method="GET" action="{% url 'admin_reports' %}" class="filter-row" style="margin-top: 4px;">
+            <form id="report-filter-form" method="GET" action="{% url 'admin_reports' %}" class="filter-row" style="margin-top: 4px;">
                 <input type="hidden" name="preset" value="custom">
 
                 <div class="custom-filter-form">
@@ -732,7 +742,7 @@
                     <input type="date" id="start_date" name="start_date" class="date-input" value="{{ start_date }}" placeholder="Start Date">
                     <label for="end_date" class="date-label">End Date</label>
                     <input type="date" id="end_date" name="end_date" class="date-input" value="{{ end_date }}" placeholder="End Date">
-                    <button type="submit" class="btn-shadcn btn-primary btn-sm">
+                    <button type="submit" id="generate-report-btn" class="btn-shadcn btn-primary btn-sm">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                         <span>Generate Report</span>
                     </button>
@@ -959,6 +969,81 @@
 
     <!-- App JS Script -->
     <script src="{% static 'assets/js/app.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('report-filter-form');
+            var startDateInput = document.getElementById('start_date');
+            var endDateInput = document.getElementById('end_date');
+            var clientAlertBox = document.getElementById('client-alert-box');
+            var clientAlertText = document.getElementById('client-alert-text');
+            var generateBtn = document.getElementById('generate-report-btn');
+
+            function showValidationAlert(message, inputToFocus) {
+                if (clientAlertBox && clientAlertText) {
+                    clientAlertText.textContent = message;
+                    clientAlertBox.style.display = 'block';
+                    clientAlertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                if (inputToFocus) {
+                    inputToFocus.focus();
+                }
+            }
+
+            function clearValidationAlert() {
+                if (clientAlertBox) {
+                    clientAlertBox.style.display = 'none';
+                }
+            }
+
+            if (startDateInput && endDateInput) {
+                startDateInput.addEventListener('change', function() {
+                    clearValidationAlert();
+                    if (this.value) {
+                        endDateInput.min = this.value;
+                    } else {
+                        endDateInput.removeAttribute('min');
+                    }
+                });
+
+                endDateInput.addEventListener('change', function() {
+                    clearValidationAlert();
+                    if (this.value) {
+                        startDateInput.max = this.value;
+                    } else {
+                        startDateInput.removeAttribute('max');
+                    }
+                });
+            }
+
+            if (form && generateBtn) {
+                generateBtn.addEventListener('click', function(e) {
+                    var startVal = startDateInput ? startDateInput.value.trim() : '';
+                    var endVal = endDateInput ? endDateInput.value.trim() : '';
+
+                    if (!startVal) {
+                        e.preventDefault();
+                        showValidationAlert('Please select a Start Date.', startDateInput);
+                        return false;
+                    }
+
+                    if (!endVal) {
+                        e.preventDefault();
+                        showValidationAlert('Please select an End Date.', endDateInput);
+                        return false;
+                    }
+
+                    if (startVal > endVal) {
+                        e.preventDefault();
+                        showValidationAlert('End Date cannot be earlier than Start Date.', endDateInput);
+                        return false;
+                    }
+
+                    clearValidationAlert();
+                    return true;
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -1,5 +1,5 @@
 import io
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pypdf import PdfReader
 from django.utils import timezone
@@ -2535,11 +2535,11 @@ class ReportDateRangeFilterFormTest(TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['total_invoices'], 0)
-        self.assertContains(resp, "End date cannot be earlier than start date.")
-        self.assertEqual(resp.context['date_error'], "End date cannot be earlier than start date.")
+        self.assertContains(resp, "End Date cannot be earlier than Start Date.")
+        self.assertEqual(resp.context['date_error'], "End Date cannot be earlier than Start Date.")
 
     def test_empty_date_fields_handling(self):
-        """Empty date strings do not raise 500 error and default cleanly."""
+        """Empty date strings trigger validation to prevent empty date selection."""
         self.authenticate_admin()
         # Both empty
         resp = self.client.get(reverse('admin_reports'), {
@@ -2547,7 +2547,8 @@ class ReportDateRangeFilterFormTest(TestCase):
             'end_date': ''
         })
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.context['total_invoices'], 4)
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertContains(resp, "Please select a Start Date.")
 
         # Only start date provided
         now = timezone.now()
@@ -2557,7 +2558,8 @@ class ReportDateRangeFilterFormTest(TestCase):
             'end_date': ''
         })
         self.assertEqual(resp_start.status_code, 200)
-        self.assertEqual(resp_start.context['total_invoices'], 2) # Inv 3 and Inv 4
+        self.assertEqual(resp_start.context['total_invoices'], 0)
+        self.assertContains(resp_start, "Please select an End Date.")
 
         # Only end date provided
         end_date = (now - timedelta(days=6)).strftime('%Y-%m-%d')
@@ -2566,7 +2568,8 @@ class ReportDateRangeFilterFormTest(TestCase):
             'end_date': end_date
         })
         self.assertEqual(resp_end.status_code, 200)
-        self.assertEqual(resp_end.context['total_invoices'], 2) # Inv 1 and Inv 2
+        self.assertEqual(resp_end.context['total_invoices'], 0)
+        self.assertContains(resp_end, "Please select a Start Date.")
 
     def test_no_invoices_in_date_range(self):
         """When no records fall in date range, empty state is displayed with 0 invoices."""
@@ -3061,6 +3064,237 @@ class DateRangeReportPDFDownloadTest(TestCase):
         resp_dist = self.client.get(reverse('admin_reports_pdf'))
         self.assertEqual(resp_dist.status_code, 302)
         self.assertIn(reverse('admin_login'), resp_dist.url)
+
+
+class DateRangeValidationTask1Test(TestCase):
+    """
+    Task 1: Comprehensive Validation Test Suite for Invoice Report Date-Range Filtering.
+    Tests all 8 mandatory validation scenarios:
+    1. Empty Start Date
+    2. Empty End Date
+    3. Both Dates Empty
+    4. End Date Earlier Than Start Date
+    5. Start Date Equal to End Date
+    6. Valid Date Range
+    7. Invalid Date Format
+    8. Direct Request with Missing Date Parameters
+    And PDF download prevention on invalid date input.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email='task1_admin@example.com',
+            password='AdminPassword123!',
+            name='Task1 Admin',
+            usertype='admin',
+            company_name='Validation Test Enterprise'
+        )
+        self.customer = Customer.objects.create(
+            name='Test Customer',
+            email='cust_val@example.com',
+            phone='9876543210',
+            address='123 Test St'
+        )
+        self.product = Product.objects.create(
+            name='Test Item',
+            price=Decimal('100.00'),
+            category='General',
+            stock=50
+        )
+
+        # Create sample invoices with controlled dates
+        # 1. Invoice on 2026-11-20
+        self.inv_mid = Invoice.objects.create(
+            invoice_number='INV-VAL-MID',
+            customer=self.customer,
+            total_amount=Decimal('500.00'),
+            payment_status='paid'
+        )
+        Invoice.objects.filter(id=self.inv_mid.id).update(
+            created_at=timezone.make_aware(datetime(2026, 11, 20, 14, 30, 0))
+        )
+        self.inv_mid.refresh_from_db()
+
+        # 2. Invoice on 2026-11-10
+        self.inv_early = Invoice.objects.create(
+            invoice_number='INV-VAL-EARLY',
+            customer=self.customer,
+            total_amount=Decimal('300.00'),
+            payment_status='paid'
+        )
+        Invoice.objects.filter(id=self.inv_early.id).update(
+            created_at=timezone.make_aware(datetime(2026, 11, 10, 10, 0, 0))
+        )
+        self.inv_early.refresh_from_db()
+
+        # 3. Invoice on 2026-11-25
+        self.inv_late = Invoice.objects.create(
+            invoice_number='INV-VAL-LATE',
+            customer=self.customer,
+            total_amount=Decimal('700.00'),
+            payment_status='paid'
+        )
+        Invoice.objects.filter(id=self.inv_late.id).update(
+            created_at=timezone.make_aware(datetime(2026, 11, 25, 16, 0, 0))
+        )
+        self.inv_late.refresh_from_db()
+
+    def authenticate_admin(self):
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['usertype'] = 'admin'
+        session.save()
+
+    def test_scenario_1_both_dates_empty(self):
+        """Scenario 1: Both Start Date and End Date are empty strings."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '',
+            'end_date': ''
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['date_error'], "Please select a Start Date.")
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['active_filter_label'], "Invalid Date Range")
+        self.assertContains(resp, "Please select a Start Date.")
+
+    def test_scenario_2_empty_start_date(self):
+        """Scenario 2: Start Date is empty while End Date is provided."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '',
+            'end_date': '2026-11-20'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['date_error'], "Please select a Start Date.")
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['active_filter_label'], "Invalid Date Range")
+        self.assertContains(resp, "Please select a Start Date.")
+
+    def test_scenario_3_empty_end_date(self):
+        """Scenario 3: Start Date is provided while End Date is empty."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '2026-11-20',
+            'end_date': ''
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['date_error'], "Please select an End Date.")
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['active_filter_label'], "Invalid Date Range")
+        self.assertContains(resp, "Please select an End Date.")
+
+    def test_scenario_4_end_date_earlier_than_start_date(self):
+        """Scenario 4: End Date is earlier than Start Date."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '2026-11-25',
+            'end_date': '2026-11-20'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['date_error'], "End Date cannot be earlier than Start Date.")
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertEqual(resp.context['active_filter_label'], "Invalid Date Range")
+        self.assertContains(resp, "End Date cannot be earlier than Start Date.")
+
+    def test_scenario_5_start_date_equal_to_end_date(self):
+        """Scenario 5: Start Date equals End Date (single day range)."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '2026-11-20',
+            'end_date': '2026-11-20'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context['date_error'])
+        self.assertEqual(resp.context['total_invoices'], 1)
+        invoice_numbers = [inv.invoice_number for inv in resp.context['invoices']]
+        self.assertIn('INV-VAL-MID', invoice_numbers)
+        self.assertNotIn('INV-VAL-EARLY', invoice_numbers)
+        self.assertNotIn('INV-VAL-LATE', invoice_numbers)
+        self.assertEqual(float(resp.context['total_amount_collected']), 500.00)
+
+    def test_scenario_6_valid_date_range(self):
+        """Scenario 6: Valid range covering multiple dates."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '2026-11-10',
+            'end_date': '2026-11-20'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context['date_error'])
+        self.assertEqual(resp.context['total_invoices'], 2)
+        invoice_numbers = [inv.invoice_number for inv in resp.context['invoices']]
+        self.assertIn('INV-VAL-EARLY', invoice_numbers)
+        self.assertIn('INV-VAL-MID', invoice_numbers)
+        self.assertNotIn('INV-VAL-LATE', invoice_numbers)
+        self.assertEqual(float(resp.context['total_amount_collected']), 800.00)
+
+    def test_scenario_7_invalid_date_format(self):
+        """Scenario 7: Malformed or unparseable date strings."""
+        self.authenticate_admin()
+        # Invalid start date
+        resp_invalid_start = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': 'invalid-date',
+            'end_date': '2026-11-20'
+        })
+        self.assertEqual(resp_invalid_start.status_code, 200)
+        self.assertEqual(resp_invalid_start.context['date_error'], "Please enter a valid date.")
+        self.assertEqual(resp_invalid_start.context['total_invoices'], 0)
+        self.assertContains(resp_invalid_start, "Please enter a valid date.")
+
+        # Invalid end date
+        resp_invalid_end = self.client.get(reverse('admin_reports'), {
+            'preset': 'custom',
+            'start_date': '2026-11-10',
+            'end_date': 'not-a-date'
+        })
+        self.assertEqual(resp_invalid_end.status_code, 200)
+        self.assertEqual(resp_invalid_end.context['date_error'], "Please enter a valid date.")
+        self.assertEqual(resp_invalid_end.context['total_invoices'], 0)
+
+    def test_scenario_8_direct_request_with_missing_parameters(self):
+        """Scenario 8: Direct GET request with preset=custom and missing date parameters."""
+        self.authenticate_admin()
+        # Missing query parameters entirely when preset=custom
+        resp = self.client.get(reverse('admin_reports') + '?preset=custom')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['date_error'], "Please select a Start Date.")
+        self.assertEqual(resp.context['total_invoices'], 0)
+        self.assertContains(resp, "Please select a Start Date.")
+
+    def test_pdf_export_blocks_invalid_date_range(self):
+        """PDF generation endpoint redirects and blocks export when date range is invalid."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports_pdf'), {
+            'preset': 'custom',
+            'start_date': '2026-11-25',
+            'end_date': '2026-11-20'
+        })
+        # Should redirect back to admin_reports
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_reports'), resp.url)
+
+    def test_frontend_validation_elements_present(self):
+        """Verify report generation form contains validation alert and trigger elements."""
+        self.authenticate_admin()
+        resp = self.client.get(reverse('admin_reports'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+
+        self.assertIn('id="report-filter-form"', content)
+        self.assertIn('id="client-alert-box"', content)
+        self.assertIn('id="generate-report-btn"', content)
+        self.assertIn('id="start_date"', content)
+        self.assertIn('id="end_date"', content)
+        self.assertIn('generateBtn.addEventListener', content)
+
 
 
 
