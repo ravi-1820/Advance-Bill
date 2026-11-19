@@ -52,12 +52,13 @@ uploads/
 qr_codes/
 /qr_codes/
 
-# Temporary QR decoder image uploads (Task 2 - not stored permanently)
+# Temporary QR decoder image uploads (Task 2 & 3 - memory processed)
 tmp_uploads/
 /tmp_uploads/
 qr_tmp/
 /qr_tmp/
 *.tmp_qr_upload
+*.tmp_qr_*
 
 # Environment variables & sensitive credentials
 .env
