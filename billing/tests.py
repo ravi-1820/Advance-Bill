@@ -1,5 +1,6 @@
 import io
 from io import BytesIO
+import qrcode
 from datetime import datetime, timedelta
 from decimal import Decimal
 from PIL import Image
@@ -3301,18 +3302,23 @@ class DateRangeValidationTask1Test(TestCase):
 
 class QRCodeDecodeAPITest(TestCase):
     """
-    Task 2: Test Suite for QR Code Decoder API Endpoint.
+    Task 2 & 3: Comprehensive Test Suite for QR Code Decoder API Endpoint.
     Tests image file acceptance, format restrictions, empty files, size limits,
-    corruption checks, and HTTP methods according to Task 2 specifications.
+    corruption checks, non-QR detection, single QR decoding, multi-QR decoding,
+    and HTTP methods according to Task 3 specifications.
     """
 
     def setUp(self):
         self.decode_url = reverse('api_qr_code_decode')
         self.alt_decode_url = reverse('api_qr_decode')
 
-    def create_test_image(self, format='PNG', size=(120, 120), filename=None):
+    def create_qr_image(self, text="INV-2026-001", format='PNG', filename=None):
+        """Helper to generate a valid QR code image in-memory."""
         buffer = BytesIO()
-        img = Image.new('RGB', size, color='navy')
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(text)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
         img.save(buffer, format=format)
         buffer.seek(0)
         ext = 'png' if format.upper() == 'PNG' else 'jpg'
@@ -3320,93 +3326,95 @@ class QRCodeDecodeAPITest(TestCase):
         content_type = 'image/png' if format.upper() == 'PNG' else 'image/jpeg'
         return SimpleUploadedFile(name, buffer.getvalue(), content_type=content_type)
 
-    def test_scenario_1_upload_valid_png(self):
-        """Scenario 1: Upload a valid PNG image file."""
-        image = self.create_test_image(format='PNG', filename='invoice_qr.png')
+    def create_plain_image(self, format='PNG', filename=None, size=(150, 150)):
+        """Helper to generate a valid image containing no QR code."""
+        buffer = BytesIO()
+        img = Image.new('RGB', size, color='navy')
+        img.save(buffer, format=format)
+        buffer.seek(0)
+        ext = 'png' if format.upper() == 'PNG' else 'jpg'
+        name = filename or f'plain_image.{ext}'
+        content_type = 'image/png' if format.upper() == 'PNG' else 'image/jpeg'
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type=content_type)
+
+    def create_multi_qr_image(self, texts=("INV-2026-001", "INV-2026-002"), format='PNG', filename=None):
+        """Helper to generate an image containing multiple distinct QR codes side by side."""
+        qr_imgs = [qrcode.make(t).convert('RGB') for t in texts]
+        total_width = sum(q.width for q in qr_imgs) + (len(qr_imgs) * 50)
+        max_height = max(q.height for q in qr_imgs)
+        combined = Image.new('RGB', (total_width, max_height), color='white')
+        offset = 10
+        for q in qr_imgs:
+            combined.paste(q, (offset, 0))
+            offset += q.width + 40
+        buffer = BytesIO()
+        combined.save(buffer, format=format)
+        buffer.seek(0)
+        ext = 'png' if format.upper() == 'PNG' else 'jpg'
+        name = filename or f'multi_qr.{ext}'
+        content_type = 'image/png' if format.upper() == 'PNG' else 'image/jpeg'
+        return SimpleUploadedFile(name, buffer.getvalue(), content_type=content_type)
+
+    def test_scenario_1_upload_valid_png_qr_code(self):
+        """Scenario 1: Upload a valid PNG QR code image file."""
+        image = self.create_qr_image(text='INV-2026-PNG-001', format='PNG', filename='invoice_qr.png')
         resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
 
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['message'], 'Image uploaded and validated successfully.')
-        self.assertEqual(data['filename'], 'invoice_qr.png')
-        self.assertEqual(data['content_type'], 'image/png')
-        self.assertEqual(data['data']['format'], 'PNG')
-        self.assertEqual(data['data']['width'], 120)
-        self.assertEqual(data['data']['height'], 120)
+        self.assertEqual(data['message'], 'QR code decoded successfully.')
+        self.assertEqual(data['data']['decoded_text'], 'INV-2026-PNG-001')
+        self.assertEqual(data['data']['format'], 'QRCODE')
+        self.assertEqual(data['data']['filename'], 'invoice_qr.png')
+        self.assertEqual(data['data']['content_type'], 'image/png')
 
-    def test_scenario_2_upload_valid_jpg(self):
-        """Scenario 2: Upload a valid JPG image file."""
-        image = self.create_test_image(format='JPEG', filename='bill_qr.jpg')
+    def test_scenario_2_upload_valid_jpg_qr_code(self):
+        """Scenario 2: Upload a valid JPG QR code image file."""
+        image = self.create_qr_image(text='INV-2026-JPG-002', format='JPEG', filename='bill_qr.jpg')
         resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
 
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['filename'], 'bill_qr.jpg')
-        self.assertEqual(data['content_type'], 'image/jpeg')
-        self.assertEqual(data['data']['format'], 'JPEG')
+        self.assertEqual(data['message'], 'QR code decoded successfully.')
+        self.assertEqual(data['data']['decoded_text'], 'INV-2026-JPG-002')
+        self.assertEqual(data['data']['format'], 'QRCODE')
+        self.assertEqual(data['data']['filename'], 'bill_qr.jpg')
+        self.assertEqual(data['data']['content_type'], 'image/jpeg')
 
-    def test_scenario_3_upload_valid_jpeg(self):
-        """Scenario 3: Upload a valid JPEG image file."""
-        image = self.create_test_image(format='JPEG', filename='sample_qr.jpeg')
+    def test_scenario_3_upload_valid_jpeg_qr_code(self):
+        """Scenario 3: Upload a valid JPEG QR code image file."""
+        image = self.create_qr_image(text='INV-2026-JPEG-003', format='JPEG', filename='sample_qr.jpeg')
         resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
 
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['filename'], 'sample_qr.jpeg')
-        self.assertEqual(data['content_type'], 'image/jpeg')
-        self.assertEqual(data['data']['format'], 'JPEG')
+        self.assertEqual(data['message'], 'QR code decoded successfully.')
+        self.assertEqual(data['data']['decoded_text'], 'INV-2026-JPEG-003')
+        self.assertEqual(data['data']['format'], 'QRCODE')
+        self.assertEqual(data['data']['filename'], 'sample_qr.jpeg')
+        self.assertEqual(data['data']['content_type'], 'image/jpeg')
 
-    def test_scenario_4_submit_without_image(self):
-        """Scenario 4: Submit request without an image file."""
-        resp = self.client.post(self.decode_url, {}, format='multipart')
-
-        self.assertEqual(resp.status_code, 400)
-        data = resp.json()
-        self.assertFalse(data['success'])
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['message'], 'Image file is required.')
-        self.assertIn('image', data['errors'])
-
-    def test_scenario_5_upload_pdf_file(self):
-        """Scenario 5: Upload an unsupported PDF file."""
-        pdf_file = SimpleUploadedFile(
-            'document.pdf',
-            b'%PDF-1.4 ... binary dummy pdf content ...',
-            content_type='application/pdf'
-        )
-        resp = self.client.post(self.decode_url, {'image': pdf_file}, format='multipart')
+    def test_scenario_4_upload_image_containing_no_qr_code(self):
+        """Scenario 4: Upload an image containing no QR code."""
+        image = self.create_plain_image(format='PNG', filename='no_qr.png')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
 
         self.assertEqual(resp.status_code, 400)
         data = resp.json()
         self.assertFalse(data['success'])
         self.assertEqual(data['status'], 'error')
-        self.assertIn('image', data['errors'])
-        self.assertIn('Unsupported', str(data['errors']['image']))
+        self.assertEqual(data['message'], 'No QR code found in the uploaded image.')
+        self.assertIn('qr_code', data['errors'])
+        self.assertIn('No QR code found', str(data['errors']['qr_code']))
 
-    def test_scenario_6_upload_empty_file(self):
-        """Scenario 6: Upload an empty file (0 bytes)."""
-        empty_file = SimpleUploadedFile(
-            'empty_qr.png',
-            b'',
-            content_type='image/png'
-        )
-        resp = self.client.post(self.decode_url, {'image': empty_file}, format='multipart')
-
-        self.assertEqual(resp.status_code, 400)
-        data = resp.json()
-        self.assertFalse(data['success'])
-        self.assertEqual(data['status'], 'error')
-        self.assertIn('image', data['errors'])
-        self.assertIn('empty', str(data['errors']['image']).lower())
-
-    def test_scenario_7_upload_corrupted_image(self):
-        """Scenario 7: Upload a corrupted or malformed image file."""
+    def test_scenario_5_upload_corrupted_image(self):
+        """Scenario 5: Upload a corrupted or malformed image file."""
         corrupted_file = SimpleUploadedFile(
             'corrupted.png',
             b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR...corrupted_payload_garbage_bytes',
@@ -3421,8 +3429,51 @@ class QRCodeDecodeAPITest(TestCase):
         self.assertIn('image', data['errors'])
         self.assertIn('Corrupted or unreadable image file', str(data['errors']['image']))
 
-    def test_scenario_8_upload_image_exceeding_size_limit(self):
-        """Scenario 8: Upload an image exceeding configured 5MB size limit."""
+    def test_scenario_6_upload_unsupported_file_type(self):
+        """Scenario 6: Upload an unsupported file type (e.g. PDF)."""
+        pdf_file = SimpleUploadedFile(
+            'document.pdf',
+            b'%PDF-1.4 ... binary dummy pdf content ...',
+            content_type='application/pdf'
+        )
+        resp = self.client.post(self.decode_url, {'image': pdf_file}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('Unsupported file format', str(data['errors']['image']))
+
+    def test_scenario_7_submit_without_image(self):
+        """Scenario 7: Submit request without an image file."""
+        resp = self.client.post(self.decode_url, {}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['message'], 'Image file is required.')
+        self.assertIn('image', data['errors'])
+
+    def test_scenario_8_upload_empty_file(self):
+        """Scenario 8: Upload an empty file (0 bytes)."""
+        empty_file = SimpleUploadedFile(
+            'empty_qr.png',
+            b'',
+            content_type='image/png'
+        )
+        resp = self.client.post(self.decode_url, {'image': empty_file}, format='multipart')
+
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['status'], 'error')
+        self.assertIn('image', data['errors'])
+        self.assertIn('empty', str(data['errors']['image']).lower())
+
+    def test_scenario_9_upload_image_exceeding_size_limit(self):
+        """Scenario 9: Upload an image exceeding configured 5MB size limit."""
         # 5MB + 1024 bytes
         oversized_bytes = b'0' * (5 * 1024 * 1024 + 1024)
         large_file = SimpleUploadedFile(
@@ -3439,8 +3490,23 @@ class QRCodeDecodeAPITest(TestCase):
         self.assertIn('image', data['errors'])
         self.assertIn('exceeds maximum limit', str(data['errors']['image']))
 
-    def test_scenario_9_submit_unsupported_http_method(self):
-        """Scenario 9: Submit request using unsupported HTTP methods (GET, PUT, DELETE)."""
+    def test_scenario_10_upload_image_with_multiple_qr_codes(self):
+        """Scenario 10: Upload an image containing multiple QR codes."""
+        image = self.create_multi_qr_image(texts=('INV-MULTI-001', 'INV-MULTI-002'), format='PNG')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['message'], 'QR code decoded successfully.')
+        self.assertIn(data['data']['decoded_text'], ['INV-MULTI-001', 'INV-MULTI-002'])
+        self.assertGreaterEqual(data['data']['count'], 2)
+        self.assertIn('INV-MULTI-001', data['data']['multiple_codes'])
+        self.assertIn('INV-MULTI-002', data['data']['multiple_codes'])
+
+    def test_scenario_11_submit_unsupported_http_method(self):
+        """Scenario 11: Submit request using unsupported HTTP methods (GET, PUT, DELETE)."""
         get_resp = self.client.get(self.decode_url)
         self.assertEqual(get_resp.status_code, 405)
 
@@ -3452,12 +3518,13 @@ class QRCodeDecodeAPITest(TestCase):
 
     def test_alias_url_endpoint(self):
         """Verify the alias endpoint /api/qr/decode/ works identically."""
-        image = self.create_test_image(format='PNG', filename='alt_invoice.png')
+        image = self.create_qr_image(text='INV-ALIAS-001', format='PNG', filename='alt_invoice.png')
         resp = self.client.post(self.alt_decode_url, {'image': image}, format='multipart')
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['filename'], 'alt_invoice.png')
+        self.assertEqual(data['data']['decoded_text'], 'INV-ALIAS-001')
+        self.assertEqual(data['data']['filename'], 'alt_invoice.png')
 
     def test_text_file_disguised_as_png(self):
         """Reject non-image text files disguised with a .png file extension."""
@@ -3471,6 +3538,25 @@ class QRCodeDecodeAPITest(TestCase):
         data = resp.json()
         self.assertFalse(data['success'])
         self.assertIn('Corrupted or unreadable image file', str(data['errors']['image']))
+
+    def test_invoice_qr_code_compatibility(self):
+        """Verify that QR codes formatted according to the project's invoice pattern decode accurately."""
+        invoice_text = (
+            "Invoice ID: INV-2026-999\n"
+            "Customer: John Doe\n"
+            "Product Count: 3\n"
+            "Total Bill: Rs 1,500.00\n"
+            "Invoice Date: 19-11-2026"
+        )
+        image = self.create_qr_image(text=invoice_text, format='PNG', filename='invoice_qr_full.png')
+        resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['data']['decoded_text'], invoice_text)
+        self.assertIn("Invoice ID: INV-2026-999", data['data']['decoded_text'])
+        self.assertIn("Total Bill: Rs 1,500.00", data['data']['decoded_text'])
 
 
 

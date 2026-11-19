@@ -2,7 +2,7 @@
 # Advance Billing System with QR - Production & Development Requirements
 # Modules: Customer & Product Management, Invoicing, QR Codes,
 #          Date-Range Reports Validation & Analytics, xhtml2pdf PDF Export,
-#          Task 2 - QR Code Decoder Image Upload API Endpoint
+#          Task 2 & 3 - QR Code Decoder API Endpoint with OpenCV Decoding
 # ==============================================================================
 
 # Core Django Framework & REST API Architecture
@@ -20,9 +20,11 @@ pycparser>=2.21
 asn1crypto>=1.5.0
 oscrypto>=1.3.0
 
-# Dynamic QR Code Generation & Image Processing (PIL/Pillow for QR decode validation)
+# Dynamic QR Code Generation, Decoding & Computer Vision
 qrcode[pil]>=8.0
 pillow>=10.0.0
+opencv-python-headless>=4.8.0
+numpy>=1.26.0
 
 # PDF Invoice Generation, Reports Layout & Document Stream Export
 xhtml2pdf>=0.2.23

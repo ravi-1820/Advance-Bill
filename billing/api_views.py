@@ -1,5 +1,8 @@
 import random
 from datetime import timedelta
+import cv2
+import numpy as np
+from PIL import Image
 from django.utils import timezone
 from django.conf import settings
 from django.core.mail import send_mail
@@ -480,11 +483,13 @@ class ProductDetailUpdateDeleteAPIView(APIView):
 
 class QRCodeDecodeAPIView(APIView):
     """
-    Task 2: QR Code Decoder API Endpoint.
+    Task 2 & 3: QR Code Decoder API Endpoint.
     Accepts image file uploads via multipart/form-data POST requests.
     Validates uploaded images (PNG, JPG, JPEG), file size limits, empty files,
     and image corruption/readability using QRCodeImageUploadSerializer.
+    Integrates OpenCV (cv2.QRCodeDetector) to decode QR code data from the image.
     Endpoint: POST /api/qr-code/decode/
+              POST /api/qr/decode/
     """
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -531,29 +536,58 @@ class QRCodeDecodeAPIView(APIView):
             }, status=status_code)
 
         uploaded_image = serializer.validated_data['image']
-
         content_type = getattr(uploaded_image, 'content_type', '') or 'image/png'
         filename = getattr(uploaded_image, 'name', '') or 'uploaded_image'
-        image_size = getattr(uploaded_image, 'size', 0)
-        image_format = getattr(uploaded_image, 'image_format', 'PNG')
-        image_width = getattr(uploaded_image, 'image_width', None)
-        image_height = getattr(uploaded_image, 'image_height', None)
 
-        response_data = {
-            "success": True,
-            "status": "success",
-            "message": "Image uploaded and validated successfully.",
-            "filename": filename,
-            "content_type": content_type,
-            "data": {
-                "filename": filename,
-                "content_type": content_type,
-                "size": image_size,
-                "format": image_format,
-                "width": image_width,
-                "height": image_height
-            }
-        }
+        # Load and convert image to OpenCV format (BGR numpy array)
+        try:
+            uploaded_image.seek(0)
+            pil_img = Image.open(uploaded_image).convert('RGB')
+            cv_img = np.array(pil_img)[:, :, ::-1]
+        except Exception:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "Corrupted or unreadable image file.",
+                "errors": {
+                    "image": ["Corrupted or unreadable image file."]
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Detect and decode QR code using OpenCV QRCodeDetector
+        detector = cv2.QRCodeDetector()
+        decoded_texts = []
+
+        # 1. Try detectAndDecodeMulti to detect single and multiple QR codes
+        try:
+            retval, decoded_info, points, _ = detector.detectAndDecodeMulti(cv_img)
+            if retval and decoded_info:
+                decoded_texts = [text.strip() for text in decoded_info if text and text.strip()]
+        except Exception:
+            decoded_texts = []
+
+        # 2. Fallback to detectAndDecode (single detector)
+        if not decoded_texts:
+            try:
+                val, points, _ = detector.detectAndDecode(cv_img)
+                if val and val.strip():
+                    decoded_texts = [val.strip()]
+            except Exception:
+                pass
+
+        # 3. Fallback: try grayscale enhancement
+        if not decoded_texts:
+            try:
+                gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                val, points, _ = detector.detectAndDecode(gray)
+                if val and val.strip():
+                    decoded_texts = [val.strip()]
+                elif not decoded_texts:
+                    ret_g, dec_g, _, _ = detector.detectAndDecodeMulti(gray)
+                    if ret_g and dec_g:
+                        decoded_texts = [text.strip() for text in dec_g if text and text.strip()]
+            except Exception:
+                pass
 
         # Safe resource cleanup: close temporary file handle if opened
         if hasattr(uploaded_image, 'close'):
@@ -562,6 +596,31 @@ class QRCodeDecodeAPIView(APIView):
             except Exception:
                 pass
 
+        # If no QR code found in the image
+        if not decoded_texts:
+            return Response({
+                "success": False,
+                "status": "error",
+                "message": "No QR code found in the uploaded image.",
+                "errors": {
+                    "qr_code": ["No QR code found in the uploaded image."]
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        primary_text = decoded_texts[0]
+        response_data = {
+            "success": True,
+            "status": "success",
+            "message": "QR code decoded successfully.",
+            "data": {
+                "decoded_text": primary_text,
+                "format": "QRCODE",
+                "multiple_codes": decoded_texts if len(decoded_texts) > 1 else [primary_text],
+                "count": len(decoded_texts),
+                "filename": filename,
+                "content_type": content_type
+            }
+        }
         return Response(response_data, status=status.HTTP_200_OK)
 
 
