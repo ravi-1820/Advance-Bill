@@ -349,7 +349,14 @@
                 </div>
 
                 <div class="card-body-styled">
-                    {% if error_msg %}
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}warning{% endif %} d-flex align-items-center p-3 rounded-3 mb-4" role="alert">
+                            <svg class="flex-shrink-0 me-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span class="small fw-semibold">{{ message }}</span>
+                        </div>
+                        {% endfor %}
+                    {% elif error_msg %}
                     <div class="alert alert-danger d-flex align-items-center p-3 rounded-3 mb-4" role="alert">
                         <svg class="flex-shrink-0 me-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                         <span class="small fw-semibold">{{ error_msg }}</span>

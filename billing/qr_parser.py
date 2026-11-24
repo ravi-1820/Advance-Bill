@@ -1,8 +1,17 @@
 import re
+import os
 import json
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
+import cv2
+import numpy as np
+from PIL import Image
 from billing.models import Invoice, InvoiceItem, Customer, Product
+
+
+MAX_QR_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+ALLOWED_QR_EXTENSIONS = ('.png', '.jpg', '.jpeg')
+ALLOWED_QR_PIL_FORMATS = ('PNG', 'JPEG')
 
 
 def parse_qr_invoice_data(decoded_text):
@@ -279,3 +288,232 @@ def parse_qr_invoice_data(decoded_text):
             }]
 
     return result
+
+
+def validate_qr_image_file(uploaded_file):
+    """
+    Task 5: Validates uploaded QR image file for:
+    1. Existence (file is provided)
+    2. Non-empty file (size > 0 bytes)
+    3. File size within configured limit (5 MB)
+    4. Allowed file extensions (.png, .jpg, .jpeg)
+    5. Actual image content and integrity using Pillow (PIL)
+
+    Returns:
+    (is_valid: bool, error_message: str or None, cv_image: np.ndarray or None)
+    """
+    if not uploaded_file:
+        return False, "Please select a QR image.", None
+
+    # Check empty file (0 bytes)
+    file_size = getattr(uploaded_file, 'size', None)
+    if file_size is not None and file_size == 0:
+        return False, "Uploaded image file is empty.", None
+
+    # Check maximum file size (5 MB limit)
+    if file_size is not None and file_size > MAX_QR_FILE_SIZE:
+        max_mb = MAX_QR_FILE_SIZE // (1024 * 1024)
+        return False, f"Uploaded file exceeds the allowed size of {max_mb} MB.", None
+
+    # Check file extension
+    filename = getattr(uploaded_file, 'name', '') or ''
+    ext = os.path.splitext(filename)[1].lower()
+    if not ext or ext not in ALLOWED_QR_EXTENSIONS:
+        return False, "Invalid image format. Only PNG, JPG, and JPEG images are supported.", None
+
+    # Actual content & integrity verification via Pillow (PIL)
+    try:
+        uploaded_file.seek(0)
+        with Image.open(uploaded_file) as pil_img:
+            pil_img.verify()
+            pil_format = (pil_img.format or '').upper()
+            if pil_format not in ALLOWED_QR_PIL_FORMATS:
+                return False, f"Invalid image format '{pil_format}'. Actual file content is not a supported PNG or JPEG image.", None
+
+        # Re-open safely to construct OpenCV RGB/BGR array
+        uploaded_file.seek(0)
+        with Image.open(uploaded_file) as pil_img:
+            rgb_img = pil_img.convert('RGB')
+            cv_img = np.array(rgb_img)[:, :, ::-1]
+            return True, None, cv_img
+    except Exception:
+        return False, "Corrupted or unreadable image file. Please upload a valid PNG, JPG, or JPEG image.", None
+    finally:
+        try:
+            uploaded_file.seek(0)
+        except Exception:
+            pass
+
+
+def decode_qr_image_content(cv_img):
+    """
+    Task 5: Decodes QR code from OpenCV image matrix (BGR).
+    Accurately distinguishes:
+    - SUCCESS: one or more valid QR codes decoded
+    - EMPTY_DATA: QR code was physically detected, but decoded content was empty or blank
+    - UNREADABLE: QR code pattern was detected, but decoding failed (blurry, damaged, distorted)
+    - NOT_FOUND: No QR code pattern was detected in the image
+    - ERROR: Unexpected exception during OpenCV detection/decoding
+
+    Returns:
+    (status: str, decoded_texts: list, error_message: str or None)
+    """
+    if cv_img is None or not isinstance(cv_img, np.ndarray) or cv_img.size == 0:
+        return 'ERROR', [], "Invalid image data."
+
+    try:
+        detector = cv2.QRCodeDetector()
+        decoded_texts = []
+        has_qr_pattern = False
+        detected_empty_content = False
+
+        # Check physical QR pattern presence
+        try:
+            has_qr_pattern, points = detector.detect(cv_img)
+            if not has_qr_pattern and points is not None and len(points) > 0:
+                has_qr_pattern = True
+        except Exception:
+            has_qr_pattern = False
+
+        # Attempt 1: Multi-code detect and decode
+        try:
+            retval, decoded_info, points, _ = detector.detectAndDecodeMulti(cv_img)
+            if retval and decoded_info:
+                for text in decoded_info:
+                    if text is not None:
+                        clean = text.strip()
+                        if clean:
+                            decoded_texts.append(clean)
+                        elif len(text) > 0:
+                            detected_empty_content = True
+        except Exception:
+            pass
+
+        # Attempt 2: Single-code detect and decode
+        if not decoded_texts:
+            try:
+                val, points, _ = detector.detectAndDecode(cv_img)
+                if val is not None:
+                    clean = val.strip()
+                    if clean:
+                        decoded_texts = [clean]
+                    elif len(val) > 0:
+                        detected_empty_content = True
+                    elif val == "" and points is not None and len(points) > 0:
+                        has_qr_pattern = True
+            except Exception:
+                pass
+
+        # Attempt 3: Grayscale enhancement for low-contrast/blurry images
+        if not decoded_texts:
+            try:
+                gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+                if not has_qr_pattern:
+                    has_qr_g, pts_g = detector.detect(gray)
+                    if has_qr_g or (pts_g is not None and len(pts_g) > 0):
+                        has_qr_pattern = True
+
+                val_g, pts_g, _ = detector.detectAndDecode(gray)
+                if val_g is not None:
+                    clean_g = val_g.strip()
+                    if clean_g:
+                        decoded_texts = [clean_g]
+                    elif len(val_g) > 0:
+                        detected_empty_content = True
+                    elif val_g == "" and pts_g is not None and len(pts_g) > 0:
+                        has_qr_pattern = True
+                elif not decoded_texts:
+                    ret_g, dec_g, _, _ = detector.detectAndDecodeMulti(gray)
+                    if ret_g and dec_g:
+                        for text in dec_g:
+                            if text is not None:
+                                clean = text.strip()
+                                if clean:
+                                    decoded_texts.append(clean)
+                                elif len(text) > 0:
+                                    detected_empty_content = True
+            except Exception:
+                pass
+
+        if decoded_texts:
+            return 'SUCCESS', decoded_texts, None
+        elif detected_empty_content:
+            return 'EMPTY_DATA', [], "QR code contains empty data."
+        elif has_qr_pattern:
+            return 'UNREADABLE', [], "Unable to decode QR code. QR code is blurry or unreadable."
+        else:
+            return 'NOT_FOUND', [], "QR code not detected. The uploaded image does not contain a QR code."
+
+    except Exception:
+        return 'ERROR', [], "Something went wrong while processing the QR image."
+
+
+def validate_and_process_qr_input(image_file=None, pasted_text=None):
+    """
+    Task 5: Unified validation and QR processing pipeline for views.
+    Ensures safe error handling without exposing internal technical details.
+    Guarantees that invalid or empty QR data is never processed as a valid invoice.
+    """
+    result = {
+        'is_success': False,
+        'decoded_text': '',
+        'parsed_invoice': None,
+        'error_message': None,
+        'error_code': None,
+    }
+
+    # Case 1: Neither file nor text provided
+    has_text = bool(pasted_text and pasted_text.strip())
+    if not image_file and not has_text:
+        result['error_message'] = "Please select a QR image to upload or paste decoded QR text."
+        result['error_code'] = 'NO_INPUT'
+        return result
+
+    # Case 2: Image file upload prioritized
+    if image_file:
+        is_valid_file, file_err, cv_img = validate_qr_image_file(image_file)
+        if not is_valid_file:
+            result['error_message'] = file_err
+            result['error_code'] = 'INVALID_FILE'
+            return result
+
+        status, decoded_texts, decode_err = decode_qr_image_content(cv_img)
+        if status != 'SUCCESS':
+            result['error_message'] = decode_err
+            result['error_code'] = status
+            return result
+
+        primary_text = decoded_texts[0]
+        result['decoded_text'] = primary_text
+        parsed = parse_qr_invoice_data(primary_text)
+        if not parsed['is_valid']:
+            result['error_message'] = "QR code decoded successfully, but does not contain valid invoice data."
+            result['error_code'] = 'INVALID_INVOICE_DATA'
+            result['parsed_invoice'] = parsed
+            result['is_success'] = False
+            return result
+
+        result['parsed_invoice'] = parsed
+        result['is_success'] = True
+        return result
+
+    # Case 3: Pasted decoded text
+    if has_text:
+        clean_text = pasted_text.strip()
+        result['decoded_text'] = clean_text
+        parsed = parse_qr_invoice_data(clean_text)
+        if not parsed['is_valid']:
+            result['error_message'] = "Decoded data is invalid or malformed. Could not extract invoice details."
+            result['error_code'] = 'INVALID_INVOICE_DATA'
+            result['parsed_invoice'] = parsed
+            result['is_success'] = False
+            return result
+
+        result['parsed_invoice'] = parsed
+        result['is_success'] = True
+        return result
+
+    result['error_message'] = "Please select a QR image to upload or paste decoded QR text."
+    result['error_code'] = 'NO_INPUT'
+    return result
+

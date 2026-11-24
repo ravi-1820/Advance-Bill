@@ -3,7 +3,7 @@ from io import BytesIO
 import qrcode
 from datetime import datetime, timedelta
 from decimal import Decimal
-from PIL import Image
+from PIL import Image, ImageFilter
 from pypdf import PdfReader
 from django.utils import timezone
 from django.core import mail
@@ -4189,6 +4189,203 @@ class QRCodeInvoiceParserAndRenderingTests(TestCase):
         self.assertContains(resp, "3,500.00")
 
 
+class InvalidAndEmptyQRUploadTests(TestCase):
+    """
+    Task 5 Comprehensive Test Suite: Handle Invalid/Empty QR Code Uploads.
+    Verifies that:
+    1. No file selected is gracefully rejected.
+    2. Empty file (0 bytes) is rejected with clear feedback.
+    3. Valid JPG QR code works properly.
+    4. Valid PNG QR code works properly.
+    5. Image containing no QR code is rejected gracefully.
+    6. Blurry or distorted QR image is handled with user-friendly error.
+    7. Corrupted image file is rejected safely via Pillow inspection.
+    8. Unsupported file extensions and non-image formats are rejected.
+    9. Oversized files exceeding 5 MB limit are rejected cleanly.
+    10. QR code with empty or blank payload is properly flagged.
+    11. Valid QR continues working and generating verified invoice information.
+    12. Data safety: invalid uploads never alter, corrupt, or create database records.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.customer = Customer.objects.create(
+            name="Vikram Malhotra",
+            email="vikram.malhotra@example.com",
+            phone="9820012345",
+            address="702 Business Arcade, Bangalore"
+        )
+        self.product = Product.objects.create(
+            name="Thermal POS Printer 80mm",
+            category="Hardware",
+            price=Decimal('4200.00'),
+            stock=25,
+            gst_rate=Decimal('18.00')
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-2026-9090",
+            total_amount=Decimal('4956.00'),
+            payment_status="Paid"
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal('4200.00'),
+            total_price=Decimal('4200.00')
+        )
+
+        from billing.views import generate_invoice_qr_text
+        self.valid_qr_text = generate_invoice_qr_text(self.invoice)
+        self.scan_url = reverse('scan_qr_invoice')
+        self.api_url = reverse('api_qr_code_decode')
+
+    def make_qr_image_file(self, text, format='PNG', filename=None):
+        """Helper to create an in-memory QR image file."""
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(text)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format=format)
+        buffer.seek(0)
+        ext = 'jpg' if format.upper() in ('JPG', 'JPEG') else 'png'
+        fname = filename or f"test_qr.{ext}"
+        content_type = 'image/jpeg' if ext == 'jpg' else 'image/png'
+        return SimpleUploadedFile(fname, buffer.getvalue(), content_type=content_type)
+
+    def test_1_no_file_selected(self):
+        """1. Submission with no file and no text returns user-friendly error without crashing."""
+        resp = self.client.post(self.scan_url, {})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Please select a QR image to upload or paste decoded QR text.")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_2_empty_file_uploaded(self):
+        """2. Uploading an empty 0-byte file is rejected cleanly."""
+        empty_file = SimpleUploadedFile("empty.png", b"", content_type="image/png")
+        resp = self.client.post(self.scan_url, {'image': empty_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Uploaded image file is empty.")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_3_valid_jpg_image_containing_qr_code(self):
+        """3. Valid JPG image containing a QR code decodes and renders complete invoice."""
+        jpg_qr = self.make_qr_image_file(self.valid_qr_text, format='JPEG', filename='invoice.jpg')
+        resp = self.client.post(self.scan_url, {'image': jpg_qr})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-9090")
+        self.assertContains(resp, "Vikram Malhotra")
+        self.assertContains(resp, "Thermal POS Printer 80mm")
+        self.assertContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_4_valid_png_image_containing_qr_code(self):
+        """4. Valid PNG image containing a QR code decodes and renders complete invoice."""
+        png_qr = self.make_qr_image_file(self.valid_qr_text, format='PNG', filename='invoice.png')
+        resp = self.client.post(self.scan_url, {'image': png_qr})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-9090")
+        self.assertContains(resp, "Vikram Malhotra")
+        self.assertContains(resp, "Thermal POS Printer 80mm")
+        self.assertContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_5_image_without_qr_code(self):
+        """5. Image containing no QR code displays 'QR code not detected' message."""
+        plain_img = Image.new('RGB', (150, 150), color='teal')
+        buffer = BytesIO()
+        plain_img.save(buffer, format='PNG')
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("plain.png", buffer.getvalue(), content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "QR code not detected")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_6_blurry_qr_image(self):
+        """6. Blurry QR image is handled gracefully with clear feedback."""
+        qr_img = qrcode.make(self.valid_qr_text).convert('RGB')
+        blurry_img = qr_img.filter(ImageFilter.GaussianBlur(radius=6))
+        buffer = BytesIO()
+        blurry_img.save(buffer, format='PNG')
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("blurry.png", buffer.getvalue(), content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        # Depending on OpenCV thresholding, blur is detected as either UNREADABLE or NOT_FOUND
+        content = resp.content.decode('utf-8')
+        has_expected_error = ("Unable to decode QR code" in content) or ("QR code not detected" in content)
+        self.assertTrue(has_expected_error)
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_7_corrupted_image(self):
+        """7. Corrupted image file is rejected by Pillow validation without application crash."""
+        corrupted_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR' + (b'\xFF' * 64)
+        corrupted_file = SimpleUploadedFile("corrupted.png", corrupted_bytes, content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': corrupted_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Corrupted or unreadable image file")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_8_unsupported_file_format(self):
+        """8. Unsupported file format (e.g. PDF or TXT disguised as image) is safely rejected."""
+        pdf_bytes = b'%PDF-1.4\n1 0 obj\n<<\n/Title (Fake PDF)\n>>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF'
+        unsupported_file = SimpleUploadedFile("invoice.pdf", pdf_bytes, content_type="application/pdf")
+
+        resp = self.client.post(self.scan_url, {'image': unsupported_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Invalid image format")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_9_oversized_image(self):
+        """9. Oversized image exceeding the 5 MB limit is rejected."""
+        oversized_bytes = b'P' * (5 * 1024 * 1024 + 1024)
+        large_file = SimpleUploadedFile("large_qr.png", oversized_bytes, content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': large_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "exceeds the allowed size")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_10_qr_code_with_empty_decoded_content(self):
+        """10. QR code with empty or blank payload is properly rejected."""
+        empty_qr_file = self.make_qr_image_file("   ", format='PNG', filename='empty_qr.png')
+        resp = self.client.post(self.scan_url, {'image': empty_qr_file})
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        has_error = ("QR code contains empty data" in content) or ("Unable to decode QR code" in content) or ("QR code not detected" in content)
+        self.assertTrue(has_error)
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_11_api_decode_empty_qr_returns_specific_error(self):
+        """11. API /api/qr-code/decode/ with empty QR code payload returns appropriate error."""
+        empty_qr_file = self.make_qr_image_file("   ", format='PNG', filename='empty_qr.png')
+        resp = self.client.post(self.api_url, {'image': empty_qr_file})
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertIn('qr_code', data['errors'])
+
+    def test_12_data_safety_no_database_mutations_on_invalid_uploads(self):
+        """12. Data safety verification: invalid uploads do not alter or create any database records."""
+        initial_invoice_count = Invoice.objects.count()
+        initial_customer_count = Customer.objects.count()
+        initial_items_count = InvoiceItem.objects.count()
+
+        # Submit various invalid uploads
+        self.client.post(self.scan_url, {})
+        self.client.post(self.scan_url, {'decoded_text': 'Malformed invalid string without any invoice details'})
+        self.client.post(self.scan_url, {'image': SimpleUploadedFile("corrupted.png", b"bad_bytes", content_type="image/png")})
+
+        self.assertEqual(Invoice.objects.count(), initial_invoice_count)
+        self.assertEqual(Customer.objects.count(), initial_customer_count)
+        self.assertEqual(InvoiceItem.objects.count(), initial_items_count)
+
+
+
     def test_distributor_cannot_access_admin_only_pages(self):
         """Authenticated Distributor session cannot access Admin dashboard."""
         self.client.post(reverse('distributor_login'), {
@@ -4450,4 +4647,201 @@ class QRCodeInvoiceParserAndRenderingTests(TestCase):
         self.assertContains(resp, "INV-2026-0042")
         self.assertContains(resp, "Rajesh Sharma")
         self.assertContains(resp, "3,500.00")
+
+
+class InvalidAndEmptyQRUploadTests(TestCase):
+    """
+    Task 5 Comprehensive Test Suite: Handle Invalid/Empty QR Code Uploads.
+    Verifies that:
+    1. No file selected is gracefully rejected.
+    2. Empty file (0 bytes) is rejected with clear feedback.
+    3. Valid JPG QR code works properly.
+    4. Valid PNG QR code works properly.
+    5. Image containing no QR code is rejected gracefully.
+    6. Blurry or distorted QR image is handled with user-friendly error.
+    7. Corrupted image file is rejected safely via Pillow inspection.
+    8. Unsupported file extensions and non-image formats are rejected.
+    9. Oversized files exceeding 5 MB limit are rejected cleanly.
+    10. QR code with empty or blank payload is properly flagged.
+    11. Valid QR continues working and generating verified invoice information.
+    12. Data safety: invalid uploads never alter, corrupt, or create database records.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.customer = Customer.objects.create(
+            name="Vikram Malhotra",
+            email="vikram.malhotra@example.com",
+            phone="9820012345",
+            address="702 Business Arcade, Bangalore"
+        )
+        self.product = Product.objects.create(
+            name="Thermal POS Printer 80mm",
+            category="Hardware",
+            price=Decimal('4200.00'),
+            stock=25,
+            gst_rate=Decimal('18.00')
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-2026-9090",
+            total_amount=Decimal('4956.00'),
+            payment_status="Paid"
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal('4200.00'),
+            total_price=Decimal('4200.00')
+        )
+
+        from billing.views import generate_invoice_qr_text
+        self.valid_qr_text = generate_invoice_qr_text(self.invoice)
+        self.scan_url = reverse('scan_qr_invoice')
+        self.api_url = reverse('api_qr_code_decode')
+
+    def make_qr_image_file(self, text, format='PNG', filename=None):
+        """Helper to create an in-memory QR image file."""
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(text)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format=format)
+        buffer.seek(0)
+        ext = 'jpg' if format.upper() in ('JPG', 'JPEG') else 'png'
+        fname = filename or f"test_qr.{ext}"
+        content_type = 'image/jpeg' if ext == 'jpg' else 'image/png'
+        return SimpleUploadedFile(fname, buffer.getvalue(), content_type=content_type)
+
+    def test_1_no_file_selected(self):
+        """1. Submission with no file and no text returns user-friendly error without crashing."""
+        resp = self.client.post(self.scan_url, {})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Please select a QR image to upload or paste decoded QR text.")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_2_empty_file_uploaded(self):
+        """2. Uploading an empty 0-byte file is rejected cleanly."""
+        empty_file = SimpleUploadedFile("empty.png", b"", content_type="image/png")
+        resp = self.client.post(self.scan_url, {'image': empty_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Uploaded image file is empty.")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_3_valid_jpg_image_containing_qr_code(self):
+        """3. Valid JPG image containing a QR code decodes and renders complete invoice."""
+        jpg_qr = self.make_qr_image_file(self.valid_qr_text, format='JPEG', filename='invoice.jpg')
+        resp = self.client.post(self.scan_url, {'image': jpg_qr})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-9090")
+        self.assertContains(resp, "Vikram Malhotra")
+        self.assertContains(resp, "Thermal POS Printer 80mm")
+        self.assertContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_4_valid_png_image_containing_qr_code(self):
+        """4. Valid PNG image containing a QR code decodes and renders complete invoice."""
+        png_qr = self.make_qr_image_file(self.valid_qr_text, format='PNG', filename='invoice.png')
+        resp = self.client.post(self.scan_url, {'image': png_qr})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-9090")
+        self.assertContains(resp, "Vikram Malhotra")
+        self.assertContains(resp, "Thermal POS Printer 80mm")
+        self.assertContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_5_image_without_qr_code(self):
+        """5. Image containing no QR code displays 'QR code not detected' message."""
+        plain_img = Image.new('RGB', (150, 150), color='teal')
+        buffer = BytesIO()
+        plain_img.save(buffer, format='PNG')
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("plain.png", buffer.getvalue(), content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "QR code not detected")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_6_blurry_qr_image(self):
+        """6. Blurry QR image is handled gracefully with clear feedback."""
+        qr_img = qrcode.make(self.valid_qr_text).convert('RGB')
+        blurry_img = qr_img.filter(ImageFilter.GaussianBlur(radius=6))
+        buffer = BytesIO()
+        blurry_img.save(buffer, format='PNG')
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("blurry.png", buffer.getvalue(), content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        # Depending on OpenCV thresholding, blur is detected as either UNREADABLE or NOT_FOUND
+        content = resp.content.decode('utf-8')
+        has_expected_error = ("Unable to decode QR code" in content) or ("QR code not detected" in content)
+        self.assertTrue(has_expected_error)
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_7_corrupted_image(self):
+        """7. Corrupted image file is rejected by Pillow validation without application crash."""
+        corrupted_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR' + (b'\xFF' * 64)
+        corrupted_file = SimpleUploadedFile("corrupted.png", corrupted_bytes, content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': corrupted_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Corrupted or unreadable image file")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_8_unsupported_file_format(self):
+        """8. Unsupported file format (e.g. PDF or TXT disguised as image) is safely rejected."""
+        pdf_bytes = b'%PDF-1.4\n1 0 obj\n<<\n/Title (Fake PDF)\n>>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF'
+        unsupported_file = SimpleUploadedFile("invoice.pdf", pdf_bytes, content_type="application/pdf")
+
+        resp = self.client.post(self.scan_url, {'image': unsupported_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Invalid image format")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_9_oversized_image(self):
+        """9. Oversized image exceeding the 5 MB limit is rejected."""
+        oversized_bytes = b'P' * (5 * 1024 * 1024 + 1024)
+        large_file = SimpleUploadedFile("large_qr.png", oversized_bytes, content_type="image/png")
+
+        resp = self.client.post(self.scan_url, {'image': large_file})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "exceeds the allowed size")
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_10_qr_code_with_empty_decoded_content(self):
+        """10. QR code with empty or blank payload is properly rejected."""
+        empty_qr_file = self.make_qr_image_file("   ", format='PNG', filename='empty_qr.png')
+        resp = self.client.post(self.scan_url, {'image': empty_qr_file})
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        has_error = ("QR code contains empty data" in content) or ("Unable to decode QR code" in content) or ("QR code not detected" in content)
+        self.assertTrue(has_error)
+        self.assertNotContains(resp, "VERIFIED DATABASE RECORD")
+
+    def test_11_api_decode_empty_qr_returns_specific_error(self):
+        """11. API /api/qr-code/decode/ with empty QR code payload returns appropriate error."""
+        empty_qr_file = self.make_qr_image_file("   ", format='PNG', filename='empty_qr.png')
+        resp = self.client.post(self.api_url, {'image': empty_qr_file})
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertIn('qr_code', data['errors'])
+
+    def test_12_data_safety_no_database_mutations_on_invalid_uploads(self):
+        """12. Data safety verification: invalid uploads do not alter or create any database records."""
+        initial_invoice_count = Invoice.objects.count()
+        initial_customer_count = Customer.objects.count()
+        initial_items_count = InvoiceItem.objects.count()
+
+        # Submit various invalid uploads
+        self.client.post(self.scan_url, {})
+        self.client.post(self.scan_url, {'decoded_text': 'Malformed invalid string without any invoice details'})
+        self.client.post(self.scan_url, {'image': SimpleUploadedFile("corrupted.png", b"bad_bytes", content_type="image/png")})
+
+        self.assertEqual(Invoice.objects.count(), initial_invoice_count)
+        self.assertEqual(Customer.objects.count(), initial_customer_count)
+        self.assertEqual(InvoiceItem.objects.count(), initial_items_count)
+
 

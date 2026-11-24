@@ -19,7 +19,7 @@ import qrcode
 from xhtml2pdf import pisa
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
 from billing.forms import InvoiceCreationForm
-from billing.qr_parser import parse_qr_invoice_data
+from billing.qr_parser import parse_qr_invoice_data, validate_and_process_qr_input
 
 
 def index(request):
@@ -1723,8 +1723,10 @@ def invoice_qr_code(request, id):
 
 def scan_qr_invoice_view(request):
     """
-    Webpage view to upload or paste a QR code image / decoded text,
-    parse the invoice data safely, and render the complete invoice details.
+    Task 4 & 5: Webpage view to upload or paste a QR code image / decoded text,
+    validate file format, integrity, size, and QR content, and render verified invoice details.
+    Guarantees data safety: does not process invalid QR data as a valid invoice,
+    and protects existing invoice records from corruption.
     """
     user_id = request.session.get('user_id')
     user = None
@@ -1744,45 +1746,31 @@ def scan_qr_invoice_view(request):
         image_file = request.FILES.get('image') or request.FILES.get('qr_image')
         pasted_text = request.POST.get('decoded_text', '').strip()
 
-        if image_file:
-            try:
-                import cv2
-                import numpy as np
-                file_bytes = np.asarray(bytearray(image_file.read()), dtype=np.uint8)
-                img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-                if img is None:
-                    error_message = "Could not decode image file. Please upload a valid PNG, JPG, or JPEG image."
-                else:
-                    detector = cv2.QRCodeDetector()
-                    raw_text, points, _ = detector.detectAndDecode(img)
-                    if not raw_text:
-                        try:
-                            retval, decoded_info, _, _ = detector.detectAndDecodeMulti(img)
-                            if retval and len(decoded_info) > 0 and decoded_info[0]:
-                                raw_text = decoded_info[0]
-                        except Exception:
-                            pass
+        result = validate_and_process_qr_input(image_file=image_file, pasted_text=pasted_text)
+        decoded_text = result.get('decoded_text') or ''
 
-                    if raw_text:
-                        decoded_text = raw_text.strip()
-                        parsed_invoice = parse_qr_invoice_data(decoded_text)
-                    else:
-                        error_message = "No QR code could be detected in the uploaded image. Please ensure the QR code is clearly visible."
-            except Exception as e:
-                error_message = f"Error processing QR image: {str(e)}"
-        elif pasted_text:
-            decoded_text = pasted_text
-            parsed_invoice = parse_qr_invoice_data(decoded_text)
+        if result['is_success']:
+            parsed_invoice = result['parsed_invoice']
         else:
-            error_message = "Please upload a QR code image or paste decoded QR text."
+            error_message = result['error_message']
+            messages.error(request, error_message)
+            if result.get('parsed_invoice') and not result['parsed_invoice'].get('is_valid'):
+                parsed_invoice = result['parsed_invoice']
+            else:
+                parsed_invoice = None
 
     elif request.method == 'GET':
         query_text = request.GET.get('decoded_text', '').strip()
         inv_id_param = request.GET.get('invoice_id', '').strip()
 
         if query_text:
+            result = validate_and_process_qr_input(pasted_text=query_text)
             decoded_text = query_text
-            parsed_invoice = parse_qr_invoice_data(decoded_text)
+            if result['is_success']:
+                parsed_invoice = result['parsed_invoice']
+            else:
+                error_message = result['error_message']
+                messages.error(request, error_message)
         elif inv_id_param:
             try:
                 inv = Invoice.objects.select_related('customer').prefetch_related('items__product').get(
@@ -1792,11 +1780,15 @@ def scan_qr_invoice_view(request):
                 parsed_invoice = parse_qr_invoice_data(decoded_text)
             except Exception:
                 error_message = f"Invoice '{inv_id_param}' not found."
+                messages.error(request, error_message)
+
+    # Strictly enforce Data Safety: only valid invoices are marked as invoice_data
+    valid_invoice_data = parsed_invoice if (parsed_invoice and parsed_invoice.get('is_valid')) else None
 
     context = {
         'user': user,
         'profile': user,
-        'invoice_data': parsed_invoice,
+        'invoice_data': valid_invoice_data,
         'parsed_invoice': parsed_invoice,
         'decoded_text': decoded_text,
         'error_msg': error_message,

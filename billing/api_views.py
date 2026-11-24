@@ -24,7 +24,7 @@ from billing.serializers import (
     QRCodeImageUploadSerializer
 )
 from billing.permissions import AdminAuthentication, IsAdminUserRole
-from billing.qr_parser import parse_qr_invoice_data
+from billing.qr_parser import parse_qr_invoice_data, decode_qr_image_content
 
 
 class DistributorRegistrationAPIView(APIView):
@@ -555,40 +555,8 @@ class QRCodeDecodeAPIView(APIView):
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Detect and decode QR code using OpenCV QRCodeDetector
-        detector = cv2.QRCodeDetector()
-        decoded_texts = []
-
-        # 1. Try detectAndDecodeMulti to detect single and multiple QR codes
-        try:
-            retval, decoded_info, points, _ = detector.detectAndDecodeMulti(cv_img)
-            if retval and decoded_info:
-                decoded_texts = [text.strip() for text in decoded_info if text and text.strip()]
-        except Exception:
-            decoded_texts = []
-
-        # 2. Fallback to detectAndDecode (single detector)
-        if not decoded_texts:
-            try:
-                val, points, _ = detector.detectAndDecode(cv_img)
-                if val and val.strip():
-                    decoded_texts = [val.strip()]
-            except Exception:
-                pass
-
-        # 3. Fallback: try grayscale enhancement
-        if not decoded_texts:
-            try:
-                gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
-                val, points, _ = detector.detectAndDecode(gray)
-                if val and val.strip():
-                    decoded_texts = [val.strip()]
-                elif not decoded_texts:
-                    ret_g, dec_g, _, _ = detector.detectAndDecodeMulti(gray)
-                    if ret_g and dec_g:
-                        decoded_texts = [text.strip() for text in dec_g if text and text.strip()]
-            except Exception:
-                pass
+        # Detect and decode QR code using unified decoder
+        status_code_qr, decoded_texts, decode_err = decode_qr_image_content(cv_img)
 
         # Safe resource cleanup: close temporary file handle if opened
         if hasattr(uploaded_image, 'close'):
@@ -597,14 +565,17 @@ class QRCodeDecodeAPIView(APIView):
             except Exception:
                 pass
 
-        # If no QR code found in the image
-        if not decoded_texts:
+        # If decoding was not successful
+        if status_code_qr != 'SUCCESS':
+            msg = decode_err
+            if status_code_qr == 'NOT_FOUND':
+                msg = "No QR code found in the uploaded image."
             return Response({
                 "success": False,
                 "status": "error",
-                "message": "No QR code found in the uploaded image.",
+                "message": msg,
                 "errors": {
-                    "qr_code": ["No QR code found in the uploaded image."]
+                    "qr_code": [msg]
                 }
             }, status=status.HTTP_400_BAD_REQUEST)
 
