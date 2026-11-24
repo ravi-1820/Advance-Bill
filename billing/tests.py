@@ -4385,6 +4385,219 @@ class InvalidAndEmptyQRUploadTests(TestCase):
         self.assertEqual(InvoiceItem.objects.count(), initial_items_count)
 
 
+class ToastAndAlertNotificationTests(TestCase):
+    """
+    Task 6 Test Suite: Consistent Toast and Alert Notification System.
+    Verifies that:
+    1. Successful Distributor login flashes success notification.
+    2. Failed Distributor login flashes error notification.
+    3. Successful Admin login flashes success notification.
+    4. Failed Admin login flashes error notification.
+    5. Successful logout flashes information notification.
+    6. Customer creation success and validation error outcomes flash appropriate messages.
+    7. Product creation and update success/error outcomes flash appropriate messages.
+    8. Invoice creation success and validation failure outcomes flash appropriate messages.
+    9. QR code scanning outcomes (valid vs invalid) flash appropriate notifications.
+    10. Toast CSS design contains top-right positioning, color rules (green, red, orange, blue),
+        close button, animations, and mobile responsiveness.
+    11. Toast JS engine in app.js provides showToast, auto-dismiss, hover pause, close handler,
+        and Django messages scanning.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="Ravi Distributor",
+            email="ravi.toast@example.com",
+            phone="9876543211",
+            company_name="Ravi Enterprises",
+            distributor_id="DST-9911",
+            usertype="distributor",
+            is_active=True
+        )
+        self.distributor.set_password("ToastPass123!")
+        self.distributor.save()
+
+        self.admin = User.objects.create(
+            name="Admin Ravi",
+            email="admin.toast@example.com",
+            phone="9876543299",
+            usertype="admin",
+            is_active=True
+        )
+        self.admin.set_password("AdminPass123!")
+        self.admin.save()
+
+    def test_1_successful_distributor_login_flashes_success_message(self):
+        """Successful distributor login creates flash message and redirects to dashboard."""
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Welcome back" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "success" for m in messages_list))
+
+    def test_2_failed_distributor_login_flashes_error_message(self):
+        """Failed distributor login flashes error message."""
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'WrongPassword123!'
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in str(m) or "doesn't exist" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "error" for m in messages_list))
+
+    def test_3_successful_admin_login_flashes_success_message(self):
+        """Successful admin login creates flash message and redirects to admin dashboard."""
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.toast@example.com',
+            'admin_password': 'AdminPass123!'
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Welcome back" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "success" for m in messages_list))
+
+    def test_4_failed_admin_login_flashes_error_message(self):
+        """Failed admin login flashes error message."""
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.toast@example.com',
+            'admin_password': 'WrongAdminPass!'
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in str(m) or "doesn't exist" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "error" for m in messages_list))
+
+    def test_5_logout_flashes_info_message(self):
+        """Logout flashes info message and redirects to login."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+        resp = self.client.get(reverse('logout'), follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Logged out successfully" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "info" for m in messages_list))
+
+    def test_6_customer_creation_success_and_validation_error_messages(self):
+        """Customer creation produces success message on valid submission, error on empty fields."""
+        # Authenticate distributor
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+
+        # Failure case: missing name
+        fail_resp = self.client.post(reverse('add_customer'), {
+            'name': '',
+            'email': 'valid@example.com',
+            'phone': '9876543210',
+            'address': 'Test City'
+        })
+        self.assertEqual(fail_resp.status_code, 200)
+        fail_msgs = list(fail_resp.context['messages'])
+        self.assertTrue(any("Please enter customer name" in str(m) for m in fail_msgs))
+
+        # Success case
+        succ_resp = self.client.post(reverse('add_customer'), {
+            'name': 'Pooja Verma',
+            'email': 'pooja.verma@example.com',
+            'phone': '9123456780',
+            'address': 'Sector 14, Gurgaon'
+        }, follow=True)
+        self.assertEqual(succ_resp.status_code, 200)
+        succ_msgs = list(succ_resp.context['messages'])
+        self.assertTrue(any("Customer added successfully" in str(m) for m in succ_msgs))
+
+    def test_7_product_creation_and_update_notifications(self):
+        """Product add and edit views flash appropriate success and validation error messages."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+
+        # Failure case: negative stock
+        fail_resp = self.client.post(reverse('add_product'), {
+            'name': 'Wireless Barcode Scanner',
+            'category': 'POS',
+            'price': '1500.00',
+            'stock': '-5',
+            'gst_rate': '18.00'
+        })
+        self.assertEqual(fail_resp.status_code, 200)
+        fail_msgs = list(fail_resp.context['messages'])
+        self.assertTrue(any("Stock cannot be negative" in str(m) for m in fail_msgs))
+
+        # Success case: add product
+        succ_resp = self.client.post(reverse('add_product'), {
+            'name': 'Handheld Scanner Model X',
+            'category': 'Hardware',
+            'price': '2200.00',
+            'stock': '15',
+            'gst_rate': '18.00'
+        }, follow=True)
+        self.assertEqual(succ_resp.status_code, 200)
+        succ_msgs = list(succ_resp.context['messages'])
+        self.assertTrue(any("Product added successfully" in str(m) for m in succ_msgs))
+
+    def test_8_qr_scan_invalid_upload_flashes_error_notification(self):
+        """Invalid QR uploads trigger appropriate error messages in scan_qr_invoice."""
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'image': SimpleUploadedFile("empty.png", b"", content_type="image/png")
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Uploaded image file is empty" in str(m) for m in messages_list))
+
+    def test_9_static_toast_css_contains_required_rules(self):
+        """Verifies styles.css contains required toast UI rules, color themes, and mobile styles."""
+        import os
+        from django.conf import settings
+        css_path = os.path.join(settings.BASE_DIR, 'billing', 'static', 'assets', 'css', 'styles.css')
+        self.assertTrue(os.path.exists(css_path))
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css = f.read()
+
+        # Check top-right positioning
+        self.assertIn('.toast-container', css)
+        self.assertIn('top: 20px', css)
+        self.assertIn('right: 20px', css)
+
+        # Check 4 notification color states
+        self.assertIn('.toast-success', css)
+        self.assertIn('.toast-error', css)
+        self.assertIn('.toast-warning', css)
+        self.assertIn('.toast-info', css)
+
+        # Check progress countdown & mobile responsiveness
+        self.assertIn('.toast-progress', css)
+        self.assertIn('.toast-close-btn', css)
+        self.assertIn('@media (max-width: 640px)', css)
+
+    def test_10_static_app_js_contains_toast_engine(self):
+        """Verifies app.js contains showToast, pause on hover, close handler, and Django messages initializer."""
+        import os
+        from django.conf import settings
+        js_path = os.path.join(settings.BASE_DIR, 'billing', 'static', 'assets', 'js', 'app.js')
+        self.assertTrue(os.path.exists(js_path))
+        with open(js_path, 'r', encoding='utf-8') as f:
+            js = f.read()
+
+        self.assertIn('showToast', js)
+        self.assertIn('initDjangoMessages', js)
+        self.assertIn('toastContainer', js)
+        self.assertIn('toast-close-btn', js)
+        self.assertIn('mouseenter', js)
+        self.assertIn('mouseleave', js)
+        self.assertIn('window.showToast = showToast', js)
+
+
+
 
     def test_distributor_cannot_access_admin_only_pages(self):
         """Authenticated Distributor session cannot access Admin dashboard."""
@@ -4843,5 +5056,218 @@ class InvalidAndEmptyQRUploadTests(TestCase):
         self.assertEqual(Invoice.objects.count(), initial_invoice_count)
         self.assertEqual(Customer.objects.count(), initial_customer_count)
         self.assertEqual(InvoiceItem.objects.count(), initial_items_count)
+
+
+class ToastAndAlertNotificationTests(TestCase):
+    """
+    Task 6 Test Suite: Consistent Toast and Alert Notification System.
+    Verifies that:
+    1. Successful Distributor login flashes success notification.
+    2. Failed Distributor login flashes error notification.
+    3. Successful Admin login flashes success notification.
+    4. Failed Admin login flashes error notification.
+    5. Successful logout flashes information notification.
+    6. Customer creation success and validation error outcomes flash appropriate messages.
+    7. Product creation and update success/error outcomes flash appropriate messages.
+    8. Invoice creation success and validation failure outcomes flash appropriate messages.
+    9. QR code scanning outcomes (valid vs invalid) flash appropriate notifications.
+    10. Toast CSS design contains top-right positioning, color rules (green, red, orange, blue),
+        close button, animations, and mobile responsiveness.
+    11. Toast JS engine in app.js provides showToast, auto-dismiss, hover pause, close handler,
+        and Django messages scanning.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="Ravi Distributor",
+            email="ravi.toast@example.com",
+            phone="9876543211",
+            company_name="Ravi Enterprises",
+            distributor_id="DST-9911",
+            usertype="distributor",
+            is_active=True
+        )
+        self.distributor.set_password("ToastPass123!")
+        self.distributor.save()
+
+        self.admin = User.objects.create(
+            name="Admin Ravi",
+            email="admin.toast@example.com",
+            phone="9876543299",
+            usertype="admin",
+            is_active=True
+        )
+        self.admin.set_password("AdminPass123!")
+        self.admin.save()
+
+    def test_1_successful_distributor_login_flashes_success_message(self):
+        """Successful distributor login creates flash message and redirects to dashboard."""
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Welcome back" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "success" for m in messages_list))
+
+    def test_2_failed_distributor_login_flashes_error_message(self):
+        """Failed distributor login flashes error message."""
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'WrongPassword123!'
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in str(m) or "doesn't exist" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "error" for m in messages_list))
+
+    def test_3_successful_admin_login_flashes_success_message(self):
+        """Successful admin login creates flash message and redirects to admin dashboard."""
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.toast@example.com',
+            'admin_password': 'AdminPass123!'
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Welcome back" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "success" for m in messages_list))
+
+    def test_4_failed_admin_login_flashes_error_message(self):
+        """Failed admin login flashes error message."""
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.toast@example.com',
+            'admin_password': 'WrongAdminPass!'
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in str(m) or "doesn't exist" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "error" for m in messages_list))
+
+    def test_5_logout_flashes_info_message(self):
+        """Logout flashes info message and redirects to login."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+        resp = self.client.get(reverse('logout'), follow=True)
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Logged out successfully" in str(m) for m in messages_list))
+        self.assertTrue(any(m.tags == "info" for m in messages_list))
+
+    def test_6_customer_creation_success_and_validation_error_messages(self):
+        """Customer creation produces success message on valid submission, error on empty fields."""
+        # Authenticate distributor
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+
+        # Failure case: missing name
+        fail_resp = self.client.post(reverse('add_customer'), {
+            'name': '',
+            'email': 'valid@example.com',
+            'phone': '9876543210',
+            'address': 'Test City'
+        })
+        self.assertEqual(fail_resp.status_code, 200)
+        fail_msgs = list(fail_resp.context['messages'])
+        self.assertTrue(any("Please enter customer name" in str(m) for m in fail_msgs))
+
+        # Success case
+        succ_resp = self.client.post(reverse('add_customer'), {
+            'name': 'Pooja Verma',
+            'email': 'pooja.verma@example.com',
+            'phone': '9123456780',
+            'address': 'Sector 14, Gurgaon'
+        }, follow=True)
+        self.assertEqual(succ_resp.status_code, 200)
+        succ_msgs = list(succ_resp.context['messages'])
+        self.assertTrue(any("Customer added successfully" in str(m) for m in succ_msgs))
+
+    def test_7_product_creation_and_update_notifications(self):
+        """Product add and edit views flash appropriate success and validation error messages."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'ravi.toast@example.com',
+            'password': 'ToastPass123!'
+        })
+
+        # Failure case: negative stock
+        fail_resp = self.client.post(reverse('add_product'), {
+            'name': 'Wireless Barcode Scanner',
+            'category': 'POS',
+            'price': '1500.00',
+            'stock': '-5',
+            'gst_rate': '18.00'
+        })
+        self.assertEqual(fail_resp.status_code, 200)
+        fail_msgs = list(fail_resp.context['messages'])
+        self.assertTrue(any("Stock cannot be negative" in str(m) for m in fail_msgs))
+
+        # Success case: add product
+        succ_resp = self.client.post(reverse('add_product'), {
+            'name': 'Handheld Scanner Model X',
+            'category': 'Hardware',
+            'price': '2200.00',
+            'stock': '15',
+            'gst_rate': '18.00'
+        }, follow=True)
+        self.assertEqual(succ_resp.status_code, 200)
+        succ_msgs = list(succ_resp.context['messages'])
+        self.assertTrue(any("Product added successfully" in str(m) for m in succ_msgs))
+
+    def test_8_qr_scan_invalid_upload_flashes_error_notification(self):
+        """Invalid QR uploads trigger appropriate error messages in scan_qr_invoice."""
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'image': SimpleUploadedFile("empty.png", b"", content_type="image/png")
+        })
+        self.assertEqual(resp.status_code, 200)
+        messages_list = list(resp.context['messages'])
+        self.assertTrue(any("Uploaded image file is empty" in str(m) for m in messages_list))
+
+    def test_9_static_toast_css_contains_required_rules(self):
+        """Verifies styles.css contains required toast UI rules, color themes, and mobile styles."""
+        import os
+        from django.conf import settings
+        css_path = os.path.join(settings.BASE_DIR, 'billing', 'static', 'assets', 'css', 'styles.css')
+        self.assertTrue(os.path.exists(css_path))
+        with open(css_path, 'r', encoding='utf-8') as f:
+            css = f.read()
+
+        # Check top-right positioning
+        self.assertIn('.toast-container', css)
+        self.assertIn('top: 20px', css)
+        self.assertIn('right: 20px', css)
+
+        # Check 4 notification color states
+        self.assertIn('.toast-success', css)
+        self.assertIn('.toast-error', css)
+        self.assertIn('.toast-warning', css)
+        self.assertIn('.toast-info', css)
+
+        # Check progress countdown & mobile responsiveness
+        self.assertIn('.toast-progress', css)
+        self.assertIn('.toast-close-btn', css)
+        self.assertIn('@media (max-width: 640px)', css)
+
+    def test_10_static_app_js_contains_toast_engine(self):
+        """Verifies app.js contains showToast, pause on hover, close handler, and Django messages initializer."""
+        import os
+        from django.conf import settings
+        js_path = os.path.join(settings.BASE_DIR, 'billing', 'static', 'assets', 'js', 'app.js')
+        self.assertTrue(os.path.exists(js_path))
+        with open(js_path, 'r', encoding='utf-8') as f:
+            js = f.read()
+
+        self.assertIn('showToast', js)
+        self.assertIn('initDjangoMessages', js)
+        self.assertIn('toastContainer', js)
+        self.assertIn('toast-close-btn', js)
+        self.assertIn('mouseenter', js)
+        self.assertIn('mouseleave', js)
+        self.assertIn('window.showToast = showToast', js)
+
 
 

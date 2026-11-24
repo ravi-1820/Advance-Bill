@@ -674,6 +674,15 @@
     <!-- Main Dashboard Viewport -->
     <main class="dashboard-container">
         
+        <!-- Django Feedback Messages -->
+        {% if messages %}
+        <div class="django-messages-data" style="display: none;">
+            {% for message in messages %}
+            <div class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         <!-- Welcome Hero Banner Card -->
         <div class="shadcn-card">
             <div class="hero-banner">
