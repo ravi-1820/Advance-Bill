@@ -3993,6 +3993,202 @@ class SessionBasedAuthenticationTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertIn(reverse('distributor_login'), resp.url)
 
+
+class QRCodeInvoiceParserAndRenderingTests(TestCase):
+    """
+    Test suite for Task 4: QR Data Parsing and Invoice Rendering.
+    Verifies that decoded QR data formats (multiline text, JSON, IDs) are properly parsed,
+    authoritative database relations are hydrated, missing fields are handled safely,
+    and rendered invoice templates display all required product and pricing details.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.customer = Customer.objects.create(
+            name="Rajesh Sharma",
+            email="rajesh.sharma@example.com",
+            phone="9876543210",
+            address="42 Commercial Hub, Mumbai"
+        )
+        self.prod1 = Product.objects.create(
+            name="Wireless Barcode Scanner",
+            category="POS Hardware",
+            price=Decimal('2500.00'),
+            stock=50,
+            gst_rate=Decimal('18.00')
+        )
+        self.prod2 = Product.objects.create(
+            name="Thermal Receipt Paper Roll (Pack of 10)",
+            category="Supplies",
+            price=Decimal('500.00'),
+            stock=100,
+            gst_rate=Decimal('12.00')
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-2026-0042",
+            total_amount=Decimal('3500.00'),
+            payment_status="Paid"
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.prod1,
+            quantity=1,
+            unit_price=Decimal('2500.00'),
+            total_price=Decimal('2500.00')
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.prod2,
+            quantity=2,
+            unit_price=Decimal('500.00'),
+            total_price=Decimal('1000.00')
+        )
+
+        from billing.views import generate_invoice_qr_text
+        self.standard_qr_text = generate_invoice_qr_text(self.invoice)
+
+    def test_parse_qr_data_multiline_with_database_hydration(self):
+        """Standard multiline QR text hydrates full invoice, customer, items, and taxes."""
+        from billing.qr_parser import parse_qr_invoice_data
+        parsed = parse_qr_invoice_data(self.standard_qr_text)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertTrue(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "INV-2026-0042")
+        self.assertEqual(parsed['customer']['name'], "Rajesh Sharma")
+        self.assertEqual(parsed['customer']['phone'], "9876543210")
+        self.assertEqual(parsed['customer']['email'], "rajesh.sharma@example.com")
+        self.assertEqual(parsed['product_count'], 2)
+        self.assertEqual(len(parsed['items']), 2)
+        self.assertEqual(parsed['grand_total'], Decimal('3500.00'))
+        self.assertEqual(parsed['subtotal'], Decimal('3500.00'))
+        self.assertIn('tax_details', parsed)
+
+    def test_parse_qr_data_standalone_id_or_number(self):
+        """Passing standalone invoice ID hydrates from database correctly."""
+        from billing.qr_parser import parse_qr_invoice_data
+        parsed = parse_qr_invoice_data(f"Invoice ID: {self.invoice.id}")
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertTrue(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "INV-2026-0042")
+
+    def test_parse_qr_data_fallback_without_database_record(self):
+        """Decoded QR text for non-existent invoice safely parses extracted fields without crashes."""
+        from billing.qr_parser import parse_qr_invoice_data
+        foreign_qr = (
+            "Invoice ID: EXT-9988\n"
+            "Customer: External Vendor Corp\n"
+            "Product Count: 3\n"
+            "Total Bill: Rs 12,450.50\n"
+            "Invoice Date: 15-08-2026"
+        )
+        parsed = parse_qr_invoice_data(foreign_qr)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertFalse(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "EXT-9988")
+        self.assertEqual(parsed['customer']['name'], "External Vendor Corp")
+        self.assertEqual(parsed['product_count'], 3)
+        self.assertEqual(parsed['grand_total'], Decimal('12450.50'))
+        self.assertEqual(parsed['invoice_date'], "15-08-2026")
+        self.assertEqual(len(parsed['items']), 1)
+        self.assertEqual(parsed['items'][0]['quantity'], 3)
+
+    def test_parse_qr_data_json_payload(self):
+        """JSON payload QR text is parsed correctly."""
+        from billing.qr_parser import parse_qr_invoice_data
+        import json
+        json_payload = json.dumps({
+            "invoice_number": "JSON-INV-100",
+            "customer_name": "Aarav Patel",
+            "phone": "9123456789",
+            "grand_total": 4500.00,
+            "items": [
+                {"name": "Wireless Mouse", "quantity": 2, "unit_price": 500.00, "total_price": 1000.00},
+                {"name": "Keyboard", "quantity": 1, "unit_price": 3500.00, "total_price": 3500.00}
+            ]
+        })
+        parsed = parse_qr_invoice_data(json_payload)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertEqual(parsed['invoice_number'], "JSON-INV-100")
+        self.assertEqual(parsed['customer']['name'], "Aarav Patel")
+        self.assertEqual(parsed['grand_total'], Decimal('4500.00'))
+        self.assertEqual(len(parsed['items']), 2)
+
+    def test_parse_qr_data_empty_and_garbage(self):
+        """Empty, None, or garbage inputs return safe dictionary with is_valid=False without crashing."""
+        from billing.qr_parser import parse_qr_invoice_data
+        for val in ["", "   ", None, "Random plain text without invoice details"]:
+            parsed = parse_qr_invoice_data(val)
+            self.assertIsInstance(parsed, dict)
+            self.assertIn('is_valid', parsed)
+
+    def test_api_qr_decode_returns_parsed_invoice(self):
+        """API endpoint /api/qr-code/decode/ returns parsed_invoice data structure."""
+        qr_img = qrcode.make(self.standard_qr_text)
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("qr.png", buffer.read(), content_type="image/png")
+
+        resp = self.client.post(reverse('api_qr_code_decode'), {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        json_resp = resp.json()
+        self.assertTrue(json_resp['success'])
+        self.assertIn('parsed_invoice', json_resp['data'])
+        self.assertEqual(json_resp['data']['parsed_invoice']['invoice_number'], "INV-2026-0042")
+
+    def test_scan_qr_invoice_view_get(self):
+        """GET /invoice/scan-qr/ returns the decoder webpage."""
+        resp = self.client.get(reverse('scan_qr_invoice'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "QR Code Invoice Decoder")
+
+    def test_scan_qr_invoice_view_get_with_query_params(self):
+        """GET /invoice/scan-qr/?invoice_id=... loads and parses invoice."""
+        resp = self.client.get(reverse('scan_qr_invoice'), {'invoice_id': self.invoice.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "Wireless Barcode Scanner")
+
+    def test_scan_qr_invoice_view_post_pasted_text(self):
+        """POST /invoice/scan-qr/ with pasted decoded_text parses and displays invoice."""
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'decoded_text': self.standard_qr_text
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "Thermal Receipt Paper Roll")
+
+    def test_scan_qr_invoice_view_post_uploaded_image(self):
+        """POST /invoice/scan-qr/ with uploaded QR image decodes via OpenCV and displays invoice."""
+        qr_img = qrcode.make(self.standard_qr_text)
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("test_qr.png", buffer.read(), content_type="image/png")
+
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'image': uploaded
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+
+    def test_invoice_detail_view(self):
+        """GET /invoice/<id>/view/ renders complete invoice with line items and totals."""
+        resp = self.client.get(reverse('invoice_detail', kwargs={'id': self.invoice.id}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "3,500.00")
+
+
     def test_distributor_cannot_access_admin_only_pages(self):
         """Authenticated Distributor session cannot access Admin dashboard."""
         self.client.post(reverse('distributor_login'), {
@@ -4059,3 +4255,199 @@ class SessionBasedAuthenticationTests(TestCase):
         resp = self.client.get(reverse('distributor_dashboard'))
         self.assertEqual(resp.status_code, 302)
         self.assertIn(reverse('distributor_login'), resp.url)
+
+
+class QRCodeInvoiceParserAndRenderingTests(TestCase):
+    """
+    Test suite for Task 4: QR Data Parsing and Invoice Rendering.
+    Verifies that decoded QR data formats (multiline text, JSON, IDs) are properly parsed,
+    authoritative database relations are hydrated, missing fields are handled safely,
+    and rendered invoice templates display all required product and pricing details.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.customer = Customer.objects.create(
+            name="Rajesh Sharma",
+            email="rajesh.sharma@example.com",
+            phone="9876543210",
+            address="42 Commercial Hub, Mumbai"
+        )
+        self.prod1 = Product.objects.create(
+            name="Wireless Barcode Scanner",
+            category="POS Hardware",
+            price=Decimal('2500.00'),
+            stock=50,
+            gst_rate=Decimal('18.00')
+        )
+        self.prod2 = Product.objects.create(
+            name="Thermal Receipt Paper Roll (Pack of 10)",
+            category="Supplies",
+            price=Decimal('500.00'),
+            stock=100,
+            gst_rate=Decimal('12.00')
+        )
+        self.invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-2026-0042",
+            total_amount=Decimal('3500.00'),
+            payment_status="Paid"
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.prod1,
+            quantity=1,
+            unit_price=Decimal('2500.00'),
+            total_price=Decimal('2500.00')
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice,
+            product=self.prod2,
+            quantity=2,
+            unit_price=Decimal('500.00'),
+            total_price=Decimal('1000.00')
+        )
+
+        from billing.views import generate_invoice_qr_text
+        self.standard_qr_text = generate_invoice_qr_text(self.invoice)
+
+    def test_parse_qr_data_multiline_with_database_hydration(self):
+        """Standard multiline QR text hydrates full invoice, customer, items, and taxes."""
+        from billing.qr_parser import parse_qr_invoice_data
+        parsed = parse_qr_invoice_data(self.standard_qr_text)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertTrue(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "INV-2026-0042")
+        self.assertEqual(parsed['customer']['name'], "Rajesh Sharma")
+        self.assertEqual(parsed['customer']['phone'], "9876543210")
+        self.assertEqual(parsed['customer']['email'], "rajesh.sharma@example.com")
+        self.assertEqual(parsed['product_count'], 2)
+        self.assertEqual(len(parsed['items']), 2)
+        self.assertEqual(parsed['grand_total'], Decimal('3500.00'))
+        self.assertEqual(parsed['subtotal'], Decimal('3500.00'))
+        self.assertIn('tax_details', parsed)
+
+    def test_parse_qr_data_standalone_id_or_number(self):
+        """Passing standalone invoice ID hydrates from database correctly."""
+        from billing.qr_parser import parse_qr_invoice_data
+        parsed = parse_qr_invoice_data(f"Invoice ID: {self.invoice.id}")
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertTrue(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "INV-2026-0042")
+
+    def test_parse_qr_data_fallback_without_database_record(self):
+        """Decoded QR text for non-existent invoice safely parses extracted fields without crashes."""
+        from billing.qr_parser import parse_qr_invoice_data
+        foreign_qr = (
+            "Invoice ID: EXT-9988\n"
+            "Customer: External Vendor Corp\n"
+            "Product Count: 3\n"
+            "Total Bill: Rs 12,450.50\n"
+            "Invoice Date: 15-08-2026"
+        )
+        parsed = parse_qr_invoice_data(foreign_qr)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertFalse(parsed['is_database_backed'])
+        self.assertEqual(parsed['invoice_number'], "EXT-9988")
+        self.assertEqual(parsed['customer']['name'], "External Vendor Corp")
+        self.assertEqual(parsed['product_count'], 3)
+        self.assertEqual(parsed['grand_total'], Decimal('12450.50'))
+        self.assertEqual(parsed['invoice_date'], "15-08-2026")
+        self.assertEqual(len(parsed['items']), 1)
+        self.assertEqual(parsed['items'][0]['quantity'], 3)
+
+    def test_parse_qr_data_json_payload(self):
+        """JSON payload QR text is parsed correctly."""
+        from billing.qr_parser import parse_qr_invoice_data
+        import json
+        json_payload = json.dumps({
+            "invoice_number": "JSON-INV-100",
+            "customer_name": "Aarav Patel",
+            "phone": "9123456789",
+            "grand_total": 4500.00,
+            "items": [
+                {"name": "Wireless Mouse", "quantity": 2, "unit_price": 500.00, "total_price": 1000.00},
+                {"name": "Keyboard", "quantity": 1, "unit_price": 3500.00, "total_price": 3500.00}
+            ]
+        })
+        parsed = parse_qr_invoice_data(json_payload)
+
+        self.assertTrue(parsed['is_valid'])
+        self.assertEqual(parsed['invoice_number'], "JSON-INV-100")
+        self.assertEqual(parsed['customer']['name'], "Aarav Patel")
+        self.assertEqual(parsed['grand_total'], Decimal('4500.00'))
+        self.assertEqual(len(parsed['items']), 2)
+
+    def test_parse_qr_data_empty_and_garbage(self):
+        """Empty, None, or garbage inputs return safe dictionary with is_valid=False without crashing."""
+        from billing.qr_parser import parse_qr_invoice_data
+        for val in ["", "   ", None, "Random plain text without invoice details"]:
+            parsed = parse_qr_invoice_data(val)
+            self.assertIsInstance(parsed, dict)
+            self.assertIn('is_valid', parsed)
+
+    def test_api_qr_decode_returns_parsed_invoice(self):
+        """API endpoint /api/qr-code/decode/ returns parsed_invoice data structure."""
+        qr_img = qrcode.make(self.standard_qr_text)
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("qr.png", buffer.read(), content_type="image/png")
+
+        resp = self.client.post(reverse('api_qr_code_decode'), {'image': uploaded})
+        self.assertEqual(resp.status_code, 200)
+        json_resp = resp.json()
+        self.assertTrue(json_resp['success'])
+        self.assertIn('parsed_invoice', json_resp['data'])
+        self.assertEqual(json_resp['data']['parsed_invoice']['invoice_number'], "INV-2026-0042")
+
+    def test_scan_qr_invoice_view_get(self):
+        """GET /invoice/scan-qr/ returns the decoder webpage."""
+        resp = self.client.get(reverse('scan_qr_invoice'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "QR Code Invoice Decoder")
+
+    def test_scan_qr_invoice_view_get_with_query_params(self):
+        """GET /invoice/scan-qr/?invoice_id=... loads and parses invoice."""
+        resp = self.client.get(reverse('scan_qr_invoice'), {'invoice_id': self.invoice.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "Wireless Barcode Scanner")
+
+    def test_scan_qr_invoice_view_post_pasted_text(self):
+        """POST /invoice/scan-qr/ with pasted decoded_text parses and displays invoice."""
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'decoded_text': self.standard_qr_text
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "Thermal Receipt Paper Roll")
+
+    def test_scan_qr_invoice_view_post_uploaded_image(self):
+        """POST /invoice/scan-qr/ with uploaded QR image decodes via OpenCV and displays invoice."""
+        qr_img = qrcode.make(self.standard_qr_text)
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        buffer.seek(0)
+        uploaded = SimpleUploadedFile("test_qr.png", buffer.read(), content_type="image/png")
+
+        resp = self.client.post(reverse('scan_qr_invoice'), {
+            'image': uploaded
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+
+    def test_invoice_detail_view(self):
+        """GET /invoice/<id>/view/ renders complete invoice with line items and totals."""
+        resp = self.client.get(reverse('invoice_detail', kwargs={'id': self.invoice.id}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "INV-2026-0042")
+        self.assertContains(resp, "Rajesh Sharma")
+        self.assertContains(resp, "3,500.00")
+

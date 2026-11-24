@@ -24,6 +24,7 @@ from billing.serializers import (
     QRCodeImageUploadSerializer
 )
 from billing.permissions import AdminAuthentication, IsAdminUserRole
+from billing.qr_parser import parse_qr_invoice_data
 
 
 class DistributorRegistrationAPIView(APIView):
@@ -608,6 +609,8 @@ class QRCodeDecodeAPIView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         primary_text = decoded_texts[0]
+        parsed_invoice_raw = parse_qr_invoice_data(primary_text)
+        parsed_invoice = {k: v for k, v in parsed_invoice_raw.items() if k != 'invoice_obj'}
         response_data = {
             "success": True,
             "status": "success",
@@ -615,6 +618,7 @@ class QRCodeDecodeAPIView(APIView):
             "data": {
                 "decoded_text": primary_text,
                 "format": "QRCODE",
+                "parsed_invoice": parsed_invoice,
                 "multiple_codes": decoded_texts if len(decoded_texts) > 1 else [primary_text],
                 "count": len(decoded_texts),
                 "filename": filename,

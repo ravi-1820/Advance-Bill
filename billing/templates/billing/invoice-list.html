@@ -534,6 +534,15 @@
                     <p>Database-driven invoice records with dynamic QR code payments</p>
                 </div>
                 <div class="header-buttons">
+                    <a href="{% url 'scan_qr_invoice' %}" class="btn-shadcn btn-secondary">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        <span>Scan / Decode QR</span>
+                    </a>
                     <a href="{% url 'create_invoice' %}" class="btn-shadcn btn-primary">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -644,8 +653,12 @@
                             </td>
                             <td style="text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <a href="{% url 'invoice_detail' invoice.id %}" class="btn-shadcn btn-outline" style="padding: 0.35rem 0.65rem; font-size: 0.78rem;" title="View Invoice Page">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        <span>View</span>
+                                    </a>
                                     <button type="button"
-                                            onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'download_invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}')"
+                                            onclick="openQRModal('{{ invoice.invoice_number|default:invoice.id|escapejs }}', '{{ invoice.customer.name|escapejs }}', '{{ invoice.qr_code_uri|escapejs }}', '{{ invoice.qr_text|escapejs }}', '{% url 'download_invoice_pdf' invoice.id %}', '{% url 'invoice_qr_code' invoice.id %}', '{{ invoice.id }}')"
                                             class="btn-shadcn btn-outline"
                                             style="padding: 0.35rem 0.65rem; font-size: 0.78rem;"
                                             title="View QR Code">
@@ -730,7 +743,11 @@
 
             <div id="qr-modal-payload" class="qr-modal-payload"></div>
 
-            <div style="display: flex; gap: 8px; width: 100%;">
+            <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                <a id="qr-modal-view-link" href="#" class="btn-shadcn btn-outline" style="flex: 1 1 100%; text-align: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>View Complete Invoice Page</span>
+                </a>
                 <a id="qr-modal-download-link" href="#" download class="btn-shadcn btn-secondary" style="flex: 1;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span>Download QR</span>
@@ -744,13 +761,19 @@
     </div>
 
     <script>
-        function openQRModal(invId, customerName, qrUri, payloadText, pdfUrl, qrDownloadUrl) {
+        function openQRModal(invId, customerName, qrUri, payloadText, pdfUrl, qrDownloadUrl, invDbId) {
             document.getElementById('qr-modal-inv-id').textContent = '#' + invId;
             document.getElementById('qr-modal-cust').textContent = customerName;
             document.getElementById('qr-modal-img').src = qrUri;
             document.getElementById('qr-modal-payload').textContent = payloadText;
             document.getElementById('qr-modal-pdf-link').href = pdfUrl;
             document.getElementById('qr-modal-download-link').href = qrDownloadUrl ? (qrDownloadUrl + '?download=1') : qrUri;
+            if (invDbId) {
+                document.getElementById('qr-modal-view-link').href = '/invoice/' + invDbId + '/view/';
+                document.getElementById('qr-modal-view-link').style.display = 'inline-flex';
+            } else {
+                document.getElementById('qr-modal-view-link').style.display = 'none';
+            }
             document.getElementById('qr-modal').classList.add('active');
         }
 
