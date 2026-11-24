@@ -3889,3 +3889,173 @@ class AdminAndDistributorLoginBackendTests(TestCase):
 
 
 
+
+
+class SessionBasedAuthenticationTests(TestCase):
+    """
+    Task 3: Automated test suite for Session-Based Authentication.
+    Verifies:
+    1. Admin can log in and maintain an authenticated Django session (request.user).
+    2. Distributor can log in and maintain an authenticated Django session (request.user).
+    3. Unauthenticated users cannot access protected dashboards.
+    4. Admin cannot access Distributor-only pages.
+    5. Distributor cannot access Admin-only pages.
+    6. Logout destroys the authenticated session.
+    7. Expired or invalid sessions are handled properly.
+    8. Back navigation prevention: verify Cache-Control headers on dashboards.
+    9. Session settings: HttpOnly, SameSite, Age, Engine.
+    10. Inactive user session invalidation.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.admin_user = User.objects.create(
+            name="Admin Master",
+            email="admin.session@advancebilling.com",
+            usertype="admin",
+            is_active=True
+        )
+        self.admin_user.set_password("AdminSecurePass123!")
+        self.admin_user.save()
+
+        self.distributor_user = User.objects.create(
+            name="Distributor Alpha",
+            email="dist.session@advancebilling.com",
+            phone="9876543210",
+            distributor_id="DIST-SESSION-01",
+            company_name="Alpha POS Corp",
+            usertype="distributor",
+            is_active=True
+        )
+        self.distributor_user.set_password("DistributorPass123!")
+        self.distributor_user.save()
+
+    def test_session_settings_configured(self):
+        """Verify session security and cookie settings in django settings."""
+        from django.conf import settings
+        self.assertEqual(settings.SESSION_ENGINE, 'django.contrib.sessions.backends.db')
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, 'Lax')
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertEqual(settings.SESSION_COOKIE_AGE, 86400)
+        self.assertIn('billing.auth_backends.BillingModelBackend', settings.AUTHENTICATION_BACKENDS)
+        self.assertIn('billing.middleware.SessionAuthenticationMiddleware', settings.MIDDLEWARE)
+
+    def test_admin_login_creates_authenticated_django_session(self):
+        """Admin login establishes an authenticated Django session with request.user populated."""
+        response = self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        # Check session keys
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+        self.assertEqual(self.client.session.get('user_id'), self.admin_user.id)
+        self.assertEqual(str(self.client.session.get('_auth_user_id')), str(self.admin_user.id))
+        # Check request.user in context
+        self.assertTrue(response.context['user'].is_authenticated)
+        self.assertEqual(response.context['user'].id, self.admin_user.id)
+        self.assertEqual(response.context['user'].usertype, 'admin')
+
+    def test_distributor_login_creates_authenticated_django_session(self):
+        """Distributor login establishes an authenticated Django session with request.user populated."""
+        response = self.client.post(reverse('distributor_login'), {
+            'identity': 'dist.session@advancebilling.com',
+            'password': 'DistributorPass123!'
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        # Check session keys
+        self.assertEqual(self.client.session.get('usertype'), 'distributor')
+        self.assertEqual(self.client.session.get('user_id'), self.distributor_user.id)
+        self.assertEqual(str(self.client.session.get('_auth_user_id')), str(self.distributor_user.id))
+        # Check request.user in context
+        self.assertTrue(response.context['user'].is_authenticated)
+        self.assertEqual(response.context['user'].id, self.distributor_user.id)
+        self.assertEqual(response.context['user'].usertype, 'distributor')
+
+    def test_unauthenticated_users_cannot_access_protected_dashboards(self):
+        """Unauthenticated requests to admin or distributor dashboards are redirected to login."""
+        admin_resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(admin_resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), admin_resp.url)
+
+        dist_resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(dist_resp.status_code, 302)
+        self.assertIn(reverse('distributor_login'), dist_resp.url)
+
+    def test_admin_cannot_access_distributor_only_pages(self):
+        """Authenticated Admin session cannot access Distributor dashboard."""
+        self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        })
+        resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_login'), resp.url)
+
+    def test_distributor_cannot_access_admin_only_pages(self):
+        """Authenticated Distributor session cannot access Admin dashboard."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'dist.session@advancebilling.com',
+            'password': 'DistributorPass123!'
+        })
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_logout_destroys_authenticated_session(self):
+        """Logout destroys session data, unauthenticates user, and prevents protected access."""
+        self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        })
+        self.assertTrue(self.client.session.get('user_id'))
+
+        logout_resp = self.client.get(reverse('logout'))
+        self.assertEqual(logout_resp.status_code, 302)
+        # Session must be destroyed
+        self.assertFalse(self.client.session.get('user_id'))
+        self.assertFalse(self.client.session.get('_auth_user_id'))
+
+        # Subsequent protected access redirected
+        dash_resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(dash_resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), dash_resp.url)
+
+    def test_expired_or_invalid_session_handled_properly(self):
+        """Invalid or tampered session keys are rejected cleanly."""
+        session = self.client.session
+        session['user_id'] = 999999  # Non-existent user id
+        session['_auth_user_id'] = '999999'
+        session['usertype'] = 'admin'
+        session.save()
+
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_back_navigation_cache_control_headers_on_dashboards(self):
+        """Protected dashboards send never_cache headers preventing cached back navigation."""
+        self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        })
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        cache_control = resp.headers.get('Cache-Control', '')
+        self.assertIn('no-cache', cache_control)
+        self.assertIn('no-store', cache_control)
+        self.assertIn('must-revalidate', cache_control)
+
+    def test_inactive_user_session_rejected(self):
+        """Deactivated user account has active session immediately invalidated."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'dist.session@advancebilling.com',
+            'password': 'DistributorPass123!'
+        })
+        self.distributor_user.is_active = False
+        self.distributor_user.save()
+
+        resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_login'), resp.url)

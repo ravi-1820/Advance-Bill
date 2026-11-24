@@ -34,9 +34,25 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
 ]
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# Session & Cookie Security Configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 86400  # 24 hours (1 day) session expiration
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True  # Rolling session: resets expiration on active requests
+SESSION_COOKIE_HTTPONLY = True  # Disallows client-side scripts from accessing session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF defense with smooth top-level navigation
+SESSION_COOKIE_SECURE = not DEBUG  # True in production HTTPS, False in local dev
+
+# CSRF Cookie Configuration
 CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = not DEBUG
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'billing.auth_backends.BillingModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 
 # Application definition
@@ -58,6 +74,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'billing.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

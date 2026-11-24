@@ -6,6 +6,8 @@ from datetime import timedelta, datetime
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import login as auth_login, logout as auth_logout
+from django.views.decorators.cache import never_cache
 from django.http import JsonResponse, HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
@@ -26,13 +28,16 @@ def index(request):
 @csrf_exempt
 def distributor_login(request):
     # Check if user is already authenticated in session
-    user_id = request.session.get('user_id')
-    if request.method == 'GET' and user_id:
-        try:
-            user = User.objects.get(id=user_id, usertype='distributor', is_active=True)
+    if request.method == 'GET':
+        user_id = request.session.get('user_id')
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='distributor', is_active=True)
+                return redirect('distributor_dashboard')
+            except User.DoesNotExist:
+                pass
+        elif getattr(request, 'user', None) and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'distributor':
             return redirect('distributor_dashboard')
-        except User.DoesNotExist:
-            pass
 
     if request.method == 'POST':
         # Support both standard form data and JSON payloads
@@ -107,6 +112,7 @@ def distributor_login(request):
 
             # 6. Validate password using Django's check_password
             if user.check_password(password):
+                auth_login(request, user, backend='billing.auth_backends.BillingModelBackend')
                 request.session['user_id'] = user.id
                 request.session['email'] = user.email
                 request.session['name'] = user.company_name or user.name or user.email
@@ -139,13 +145,16 @@ def distributor_login(request):
 @csrf_exempt
 def admin_login(request):
     # Check if user is already authenticated in session
-    user_id = request.session.get('user_id')
-    if request.method == 'GET' and user_id:
-        try:
-            user = User.objects.get(id=user_id, usertype='admin', is_active=True)
+    if request.method == 'GET':
+        user_id = request.session.get('user_id')
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='admin', is_active=True)
+                return redirect('admin_dashboard')
+            except User.DoesNotExist:
+                pass
+        elif getattr(request, 'user', None) and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'admin':
             return redirect('admin_dashboard')
-        except User.DoesNotExist:
-            pass
 
     if request.method == 'POST':
         # Support both standard form data and JSON payloads
@@ -211,6 +220,7 @@ def admin_login(request):
 
             # 5. Validate password using Django's check_password
             if user.check_password(password):
+                auth_login(request, user, backend='billing.auth_backends.BillingModelBackend')
                 request.session['user_id'] = user.id
                 request.session['email'] = user.email
                 request.session['name'] = user.name or user.email
@@ -241,13 +251,19 @@ def admin_login(request):
 
 
 def logout_view(request):
-    was_admin = request.session.get('usertype') == 'admin'
+    was_admin = (
+        request.session.get('usertype') == 'admin' or
+        (getattr(request, 'user', None) and getattr(request.user, 'usertype', '') == 'admin')
+    )
     next_url = request.GET.get('next') or request.POST.get('next')
     try:
-        request.session.flush()
+        auth_logout(request)
         messages.info(request, "Logged out successfully..!")
     except Exception:
-        pass
+        try:
+            request.session.flush()
+        except Exception:
+            pass
     if next_url:
         return redirect(next_url)
     if was_admin:
@@ -255,6 +271,7 @@ def logout_view(request):
     return redirect('index')
 
 
+@never_cache
 def distributor_dashboard(request):
     try:
         user_id = request.session.get('user_id')
@@ -784,6 +801,7 @@ def delete_product(request, id):
 
 
 
+@never_cache
 def admin_dashboard(request):
     try:
         user_id = request.session.get('user_id')

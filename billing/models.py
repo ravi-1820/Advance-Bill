@@ -54,6 +54,15 @@ class User(models.Model):
     def is_anonymous(self):
         return False
 
+    @property
+    def username(self):
+        return self.email
+
+    def get_session_auth_hash(self):
+        import hashlib
+        key_salt = "billing.models.User.get_session_auth_hash"
+        return hashlib.sha256(f"{key_salt}:{self.password}".encode('utf-8')).hexdigest()
+
     def set_password(self, raw_password):
         self.password = make_password(raw_password)
 
