@@ -42,6 +42,7 @@ class User(models.Model):
     usertype = models.CharField(max_length=20, default='distributor')  # 'distributor' or 'admin'
     today_sales = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     available_inventory = models.IntegerField(default=1000)
+    is_active = models.BooleanField(default=True)
 
     objects = UserManager()
 

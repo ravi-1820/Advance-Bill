@@ -25,113 +25,261 @@ def index(request):
 
 @csrf_exempt
 def distributor_login(request):
+    # Check if user is already authenticated in session
+    user_id = request.session.get('user_id')
+    if request.method == 'GET' and user_id:
+        try:
+            user = User.objects.get(id=user_id, usertype='distributor', is_active=True)
+            return redirect('distributor_dashboard')
+        except User.DoesNotExist:
+            pass
+
     if request.method == 'POST':
-        identity = request.POST.get('identity', '').strip()
-        password = request.POST.get('password', '').strip()
-        mobile = request.POST.get('mobile', '').strip()
+        # Support both standard form data and JSON payloads
+        if request.content_type == 'application/json':
+            try:
+                import json
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+            is_json = True
+        else:
+            data = request.POST
+            is_json = False
+
+        identity = (
+            data.get('identity') or 
+            data.get('distributor_id') or 
+            data.get('email') or 
+            data.get('username') or ''
+        ).strip()
+        mobile = (data.get('mobile') or data.get('phone') or '').strip()
+        password = data.get('password', '').strip()
+
+        # Missing fields validation
+        if not password or (not identity and not mobile):
+            err_msg = "Please enter all required fields..!"
+            if is_json:
+                return JsonResponse({'success': False, 'message': err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
 
         try:
             user = None
 
-            # 1. Search by mobile number
+            # 1. Search by mobile number if provided
             if mobile:
-                try:
-                    user = User.objects.get(phone=mobile, usertype='distributor')
-                except User.DoesNotExist:
-                    pass
+                clean_mobile = ''.join(c for c in mobile if c.isdigit())
+                user = User.objects.filter(Q(phone=mobile) | Q(phone=clean_mobile)).first()
 
-            # 2. Search by distributor ID
+            # 2. Search by distributor ID, email, phone, or name
             if not user and identity:
-                try:
-                    user = User.objects.get(distributor_id=identity, usertype='distributor')
-                except User.DoesNotExist:
-                    pass
+                user = User.objects.filter(
+                    Q(distributor_id__iexact=identity) | 
+                    Q(email__iexact=identity) | 
+                    Q(phone=identity) |
+                    Q(name__iexact=identity)
+                ).first()
 
-            # 3. Search by email
-            if not user and identity:
-                try:
-                    user = User.objects.get(email=identity, usertype='distributor')
-                except User.DoesNotExist:
-                    pass
+            # 3. Check if account exists
+            if not user:
+                err_msg = "Distributor account doesn't exist..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=404)
+                messages.error(request, err_msg)
+                return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
 
-            if user:
-                # Validate password
-                if user.check_password(password):
-                    request.session['user_id'] = user.id
-                    request.session['email'] = user.email
-                    request.session['name'] = user.company_name or user.name
-                    request.session['usertype'] = 'distributor'
-                    return redirect('distributor_dashboard')
-                else:
-                    messages.error(request, "Password doesn't match..!")
-                    return render(request, 'billing/distributor-login.html')
+            # 4. Role restriction: Prevent Admin accounts from logging in through distributor portal
+            if user.usertype != 'distributor':
+                err_msg = "Access restricted: This portal is for Distributors only..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=403)
+                messages.error(request, err_msg)
+                return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
+
+            # 5. Check if user is active
+            if not getattr(user, 'is_active', True):
+                err_msg = "Your account is inactive. Please contact administrator..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=403)
+                messages.error(request, err_msg)
+                return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
+
+            # 6. Validate password using Django's check_password
+            if user.check_password(password):
+                request.session['user_id'] = user.id
+                request.session['email'] = user.email
+                request.session['name'] = user.company_name or user.name or user.email
+                request.session['usertype'] = 'distributor'
+                messages.success(request, f"Welcome back, {user.company_name or user.name}!")
+                if is_json:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Login successful.',
+                        'redirect_url': '/distributor-dashboard/'
+                    })
+                return redirect('distributor_dashboard')
             else:
-                messages.error(request, "Distributor account doesn't exist..!")
-                return render(request, 'billing/distributor-login.html')
+                err_msg = "Password doesn't match..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=401)
+                messages.error(request, err_msg)
+                return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
 
         except Exception:
-            messages.error(request, "Something went wrong. Please try again.")
-            return render(request, 'billing/distributor-login.html')
+            err_msg = "Something went wrong. Please try again."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err_msg}, status=500)
+            messages.error(request, err_msg)
+            return render(request, 'billing/distributor-login.html', {'identity': identity, 'mobile': mobile})
 
     return render(request, 'billing/distributor-login.html')
 
 
 @csrf_exempt
 def admin_login(request):
+    # Check if user is already authenticated in session
+    user_id = request.session.get('user_id')
+    if request.method == 'GET' and user_id:
+        try:
+            user = User.objects.get(id=user_id, usertype='admin', is_active=True)
+            return redirect('admin_dashboard')
+        except User.DoesNotExist:
+            pass
+
     if request.method == 'POST':
-        admin_identity = request.POST.get('admin_email', '').strip()
-        password = request.POST.get('admin_password', '').strip()
+        # Support both standard form data and JSON payloads
+        if request.content_type == 'application/json':
+            try:
+                import json
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+            is_json = True
+        else:
+            data = request.POST
+            is_json = False
+
+        admin_identity = (
+            data.get('admin_email') or 
+            data.get('identity') or 
+            data.get('email') or 
+            data.get('username') or ''
+        ).strip()
+        password = (
+            data.get('admin_password') or 
+            data.get('password') or ''
+        ).strip()
+
+        # Missing fields validation
+        if not admin_identity or not password:
+            err_msg = "Please enter both admin email and password..!"
+            if is_json:
+                return JsonResponse({'success': False, 'message': err_msg}, status=400)
+            messages.error(request, err_msg)
+            return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
 
         try:
-            user = None
-            try:
-                user = User.objects.get(email=admin_identity, usertype='admin')
-            except User.DoesNotExist:
-                pass
+            # 1. Search admin by email or name/username (case-insensitive)
+            user = User.objects.filter(
+                Q(email__iexact=admin_identity) | Q(name__iexact=admin_identity)
+            ).first()
 
-            if user:
-                if user.check_password(password):
-                    request.session['user_id'] = user.id
-                    request.session['email'] = user.email
-                    request.session['name'] = user.name
-                    request.session['usertype'] = 'admin'
-                    return redirect('admin_dashboard')
-                else:
-                    messages.error(request, "Password doesn't match..!")
-                    return render(request, 'billing/admin-login.html')
+            # 2. Check if account exists
+            if not user:
+                err_msg = "Admin account doesn't exist..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=404)
+                messages.error(request, err_msg)
+                return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
+
+            # 3. Role restriction: Prevent non-admin accounts from logging in through admin portal
+            if user.usertype != 'admin':
+                err_msg = "Access restricted: This portal is for Administrators only..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=403)
+                messages.error(request, err_msg)
+                return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
+
+            # 4. Check if user is active
+            if not getattr(user, 'is_active', True):
+                err_msg = "Your account is inactive. Please contact administrator..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=403)
+                messages.error(request, err_msg)
+                return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
+
+            # 5. Validate password using Django's check_password
+            if user.check_password(password):
+                request.session['user_id'] = user.id
+                request.session['email'] = user.email
+                request.session['name'] = user.name or user.email
+                request.session['usertype'] = 'admin'
+                messages.success(request, f"Welcome back, {user.name or 'Admin'}!")
+                if is_json:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Login successful.',
+                        'redirect_url': '/admin-dashboard/'
+                    })
+                return redirect('admin_dashboard')
             else:
-                messages.error(request, "Admin account doesn't exist..!")
-                return render(request, 'billing/admin-login.html')
+                err_msg = "Password doesn't match..!"
+                if is_json:
+                    return JsonResponse({'success': False, 'message': err_msg}, status=401)
+                messages.error(request, err_msg)
+                return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
 
         except Exception:
-            messages.error(request, "Something went wrong. Please try again.")
-            return render(request, 'billing/admin-login.html')
+            err_msg = "Something went wrong. Please try again."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err_msg}, status=500)
+            messages.error(request, err_msg)
+            return render(request, 'billing/admin-login.html', {'admin_email': admin_identity})
 
     return render(request, 'billing/admin-login.html')
 
 
 def logout_view(request):
+    was_admin = request.session.get('usertype') == 'admin'
+    next_url = request.GET.get('next') or request.POST.get('next')
     try:
         request.session.flush()
         messages.info(request, "Logged out successfully..!")
     except Exception:
         pass
+    if next_url:
+        return redirect(next_url)
+    if was_admin:
+        return redirect('admin_login')
     return redirect('index')
 
 
 def distributor_dashboard(request):
     try:
         user_id = request.session.get('user_id')
-        if not user_id:
-            return redirect('index')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='distributor')
+            except User.DoesNotExist:
+                user = None
 
-        user = User.objects.get(id=user_id, usertype='distributor')
+        if not user and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'distributor':
+            user = request.user
+
+        if not user:
+            messages.error(request, "Access restricted to Distributors only..!")
+            return redirect('distributor_login')
+
+        if not getattr(user, 'is_active', True):
+            request.session.flush()
+            messages.error(request, "Your account is inactive. Please contact administrator..!")
+            return redirect('distributor_login')
+
         return render(request, 'billing/distributor-dashboard.html', {'user': user, 'profile': user})
-    except User.DoesNotExist:
-        messages.error(request, "Access restricted to Distributors only..!")
-        return redirect('index')
     except Exception:
-        return redirect('index')
+        return redirect('distributor_login')
 
 
 @csrf_exempt
@@ -639,16 +787,28 @@ def delete_product(request, id):
 def admin_dashboard(request):
     try:
         user_id = request.session.get('user_id')
-        if not user_id:
-            return redirect('index')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id, usertype='admin')
+            except User.DoesNotExist:
+                user = None
 
-        user = User.objects.get(id=user_id, usertype='admin')
+        if not user and request.user.is_authenticated and getattr(request.user, 'usertype', '') == 'admin':
+            user = request.user
+
+        if not user:
+            messages.error(request, "Access restricted to Administrators only..!")
+            return redirect('admin_login')
+
+        if not getattr(user, 'is_active', True):
+            request.session.flush()
+            messages.error(request, "Your account is inactive. Please contact administrator..!")
+            return redirect('admin_login')
+
         return render(request, 'billing/admin-dashboard.html', {'user': user})
-    except User.DoesNotExist:
-        messages.error(request, "Access restricted to Administrators only..!")
-        return redirect('index')
     except Exception:
-        return redirect('index')
+        return redirect('admin_login')
 
 
 def admin_products(request):

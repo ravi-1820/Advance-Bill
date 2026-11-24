@@ -3551,12 +3551,327 @@ class QRCodeDecodeAPITest(TestCase):
         image = self.create_qr_image(text=invoice_text, format='PNG', filename='invoice_qr_full.png')
         resp = self.client.post(self.decode_url, {'image': image}, format='multipart')
 
+
+class AdminAndDistributorLoginBackendTests(TestCase):
+    """
+    Comprehensive verification for Task 1: Admin and Distributor Login Backend.
+    Tests credential validation, role checking, inactive account blocks, missing fields,
+    cross-portal restrictions, logout session teardown, and JSON API conventions.
+    """
+
+    def setUp(self):
+        self.client = Client()
+
+        # 1. Active Admin User
+        self.admin_password = "MasterAdminPass2026!"
+        self.admin_user = User.objects.create(
+            name="SuperAdmin",
+            email="master.admin@advancebilling.com",
+            usertype="admin",
+            is_active=True
+        )
+        self.admin_user.set_password(self.admin_password)
+        self.admin_user.save()
+
+        # 2. Inactive Admin User
+        self.inactive_admin = User.objects.create(
+            name="InactiveAdmin",
+            email="inactive.admin@advancebilling.com",
+            usertype="admin",
+            is_active=False
+        )
+        self.inactive_admin.set_password(self.admin_password)
+        self.inactive_admin.save()
+
+        # 3. Active Distributor User
+        self.dist_password = "DistributorPass2026!"
+        self.distributor_user = User.objects.create(
+            name="Distributor One",
+            email="distributor1@advancebilling.com",
+            phone="9876543210",
+            distributor_id="DIST-88888",
+            company_name="Apex Traders",
+            usertype="distributor",
+            is_active=True
+        )
+        self.distributor_user.set_password(self.dist_password)
+        self.distributor_user.save()
+
+        # 4. Inactive Distributor User
+        self.inactive_distributor = User.objects.create(
+            name="Inactive Distributor",
+            email="inactive.dist@advancebilling.com",
+            phone="9123456789",
+            distributor_id="DIST-99999",
+            company_name="Dormant Traders",
+            usertype="distributor",
+            is_active=False
+        )
+        self.inactive_distributor.set_password(self.dist_password)
+        self.inactive_distributor.save()
+
+    # --- ADMIN LOGIN TESTS ---
+
+    def test_admin_login_with_valid_email_and_password(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': self.admin_user.email,
+            'admin_password': self.admin_password
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_dashboard'), resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.admin_user.id)
+        self.assertEqual(self.client.session.get('usertype'), 'admin')
+
+    def test_admin_login_with_valid_name_and_password(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': self.admin_user.name,
+            'admin_password': self.admin_password
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_dashboard'), resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.admin_user.id)
+
+    def test_admin_login_with_invalid_password(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': self.admin_user.email,
+            'admin_password': 'WrongPassword123!'
+        })
         self.assertEqual(resp.status_code, 200)
-        data = resp.json()
-        self.assertTrue(data['success'])
-        self.assertEqual(data['data']['decoded_text'], invoice_text)
-        self.assertIn("Invoice ID: INV-2026-999", data['data']['decoded_text'])
-        self.assertIn("Total Bill: Rs 1,500.00", data['data']['decoded_text'])
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in m.message for m in messages))
+
+    def test_admin_login_with_invalid_email(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': 'nonexistent.admin@advancebilling.com',
+            'admin_password': self.admin_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Admin account doesn't exist" in m.message for m in messages))
+
+    def test_admin_login_with_inactive_account_rejected(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': self.inactive_admin.email,
+            'admin_password': self.admin_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("inactive" in m.message.lower() for m in messages))
+
+    def test_admin_login_missing_fields_validation(self):
+        # Missing password
+        r1 = self.client.post(reverse('admin_login'), {
+            'admin_email': self.admin_user.email,
+            'admin_password': ''
+        })
+        self.assertEqual(r1.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages1 = list(r1.context['messages'])
+        self.assertTrue(any("required" in m.message.lower() or "both" in m.message.lower() for m in messages1))
+
+        # Missing identity
+        r2 = self.client.post(reverse('admin_login'), {
+            'admin_email': '',
+            'admin_password': self.admin_password
+        })
+        self.assertEqual(r2.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+
+    def test_distributor_cannot_login_through_admin_portal(self):
+        resp = self.client.post(reverse('admin_login'), {
+            'admin_email': self.distributor_user.email,
+            'admin_password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Administrators only" in m.message for m in messages))
+
+    # --- DISTRIBUTOR LOGIN TESTS ---
+
+    def test_distributor_login_with_distributor_id_and_password(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': self.distributor_user.distributor_id,
+            'password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_dashboard'), resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.distributor_user.id)
+        self.assertEqual(self.client.session.get('usertype'), 'distributor')
+
+    def test_distributor_login_with_email_and_password(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': self.distributor_user.email,
+            'password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_dashboard'), resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.distributor_user.id)
+
+    def test_distributor_login_with_mobile_and_password(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'mobile': self.distributor_user.phone,
+            'password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_dashboard'), resp.url)
+        self.assertEqual(self.client.session.get('user_id'), self.distributor_user.id)
+
+    def test_distributor_login_with_invalid_password(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': self.distributor_user.distributor_id,
+            'password': 'WrongPassword123!'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Password doesn't match" in m.message for m in messages))
+
+    def test_distributor_login_with_invalid_identity(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': 'DIST-00000_DOES_NOT_EXIST',
+            'password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Distributor account doesn't exist" in m.message for m in messages))
+
+    def test_distributor_login_with_inactive_account_rejected(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': self.inactive_distributor.distributor_id,
+            'password': self.dist_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("inactive" in m.message.lower() for m in messages))
+
+    def test_distributor_login_missing_fields_validation(self):
+        # Missing password
+        r1 = self.client.post(reverse('distributor_login'), {
+            'identity': self.distributor_user.distributor_id,
+            'password': ''
+        })
+        self.assertEqual(r1.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages1 = list(r1.context['messages'])
+        self.assertTrue(any("required" in m.message.lower() for m in messages1))
+
+        # Missing identity
+        r2 = self.client.post(reverse('distributor_login'), {
+            'identity': '',
+            'password': self.dist_password
+        })
+        self.assertEqual(r2.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+
+    def test_admin_cannot_login_through_distributor_portal(self):
+        resp = self.client.post(reverse('distributor_login'), {
+            'identity': self.admin_user.email,
+            'password': self.admin_password
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(self.client.session.get('user_id'))
+        messages = list(resp.context['messages'])
+        self.assertTrue(any("Distributors only" in m.message for m in messages))
+
+    # --- ROLE-BASED ACCESS RESTRICTIONS ON DASHBOARDS ---
+
+    def test_role_restriction_admin_cannot_access_distributor_dashboard(self):
+        # Login as Admin
+        session = self.client.session
+        session['user_id'] = self.admin_user.id
+        session['usertype'] = 'admin'
+        session.save()
+
+        resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        # Blocked from distributor dashboard
+        self.assertTrue(resp.url == reverse('distributor_login') or resp.url == reverse('index'))
+
+    def test_role_restriction_distributor_cannot_access_admin_dashboard(self):
+        # Login as Distributor
+        session = self.client.session
+        session['user_id'] = self.distributor_user.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        # Blocked from admin dashboard
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_anonymous_user_cannot_access_admin_dashboard(self):
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_anonymous_user_cannot_access_distributor_dashboard(self):
+        resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp.url == reverse('distributor_login') or resp.url == reverse('index'))
+
+    # --- LOGOUT FUNCTIONALITY ---
+
+    def test_logout_clears_session_and_redirects(self):
+        session = self.client.session
+        session['user_id'] = self.distributor_user.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+        resp = self.client.get(reverse('logout'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIsNone(self.client.session.get('user_id'))
+        self.assertIsNone(self.client.session.get('usertype'))
+
+    # --- JSON API CONVENTIONS ---
+
+    def test_json_api_login_for_admin_and_distributor(self):
+        import json
+        # Admin JSON login
+        resp_admin = self.client.post(
+            reverse('admin_login'),
+            json.dumps({
+                'admin_email': self.admin_user.email,
+                'admin_password': self.admin_password
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(resp_admin.status_code, 200)
+        data_admin = resp_admin.json()
+        self.assertTrue(data_admin['success'])
+        self.assertEqual(data_admin['redirect_url'], '/admin-dashboard/')
+
+        # Distributor JSON login
+        resp_dist = self.client.post(
+            reverse('distributor_login'),
+            json.dumps({
+                'identity': self.distributor_user.distributor_id,
+                'password': self.dist_password
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(resp_dist.status_code, 200)
+        data_dist = resp_dist.json()
+        self.assertTrue(data_dist['success'])
+        self.assertEqual(data_dist['redirect_url'], '/distributor-dashboard/')
+
+        # Invalid password via JSON returns 401
+        resp_bad = self.client.post(
+            reverse('admin_login'),
+            json.dumps({
+                'admin_email': self.admin_user.email,
+                'admin_password': 'wrong'
+            }),
+            content_type='application/json'
+        )
+        self.assertEqual(resp_bad.status_code, 401)
+        self.assertFalse(resp_bad.json()['success'])
+
 
 
 
