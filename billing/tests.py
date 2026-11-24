@@ -3993,6 +3993,73 @@ class SessionBasedAuthenticationTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertIn(reverse('distributor_login'), resp.url)
 
+    def test_distributor_cannot_access_admin_only_pages(self):
+        """Authenticated Distributor session cannot access Admin dashboard."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'dist.session@advancebilling.com',
+            'password': 'DistributorPass123!'
+        })
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_logout_destroys_authenticated_session(self):
+        """Logout destroys session data, unauthenticates user, and prevents protected access."""
+        self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        })
+        self.assertTrue(self.client.session.get('user_id'))
+
+        logout_resp = self.client.get(reverse('logout'))
+        self.assertEqual(logout_resp.status_code, 302)
+        # Session must be destroyed
+        self.assertFalse(self.client.session.get('user_id'))
+        self.assertFalse(self.client.session.get('_auth_user_id'))
+
+        # Subsequent protected access redirected
+        dash_resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(dash_resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), dash_resp.url)
+
+    def test_expired_or_invalid_session_handled_properly(self):
+        """Invalid or tampered session keys are rejected cleanly."""
+        session = self.client.session
+        session['user_id'] = 999999  # Non-existent user id
+        session['_auth_user_id'] = '999999'
+        session['usertype'] = 'admin'
+        session.save()
+
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('admin_login'), resp.url)
+
+    def test_back_navigation_cache_control_headers_on_dashboards(self):
+        """Protected dashboards send never_cache headers preventing cached back navigation."""
+        self.client.post(reverse('admin_login'), {
+            'admin_email': 'admin.session@advancebilling.com',
+            'admin_password': 'AdminSecurePass123!'
+        })
+        resp = self.client.get(reverse('admin_dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        cache_control = resp.headers.get('Cache-Control', '')
+        self.assertIn('no-cache', cache_control)
+        self.assertIn('no-store', cache_control)
+        self.assertIn('must-revalidate', cache_control)
+
+    def test_inactive_user_session_rejected(self):
+        """Deactivated user account has active session immediately invalidated."""
+        self.client.post(reverse('distributor_login'), {
+            'identity': 'dist.session@advancebilling.com',
+            'password': 'DistributorPass123!'
+        })
+        self.distributor_user.is_active = False
+        self.distributor_user.save()
+
+        resp = self.client.get(reverse('distributor_dashboard'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn(reverse('distributor_login'), resp.url)
+
 
 class QRCodeInvoiceParserAndRenderingTests(TestCase):
     """
@@ -4595,76 +4662,6 @@ class ToastAndAlertNotificationTests(TestCase):
         self.assertIn('mouseenter', js)
         self.assertIn('mouseleave', js)
         self.assertIn('window.showToast = showToast', js)
-
-
-
-
-    def test_distributor_cannot_access_admin_only_pages(self):
-        """Authenticated Distributor session cannot access Admin dashboard."""
-        self.client.post(reverse('distributor_login'), {
-            'identity': 'dist.session@advancebilling.com',
-            'password': 'DistributorPass123!'
-        })
-        resp = self.client.get(reverse('admin_dashboard'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn(reverse('admin_login'), resp.url)
-
-    def test_logout_destroys_authenticated_session(self):
-        """Logout destroys session data, unauthenticates user, and prevents protected access."""
-        self.client.post(reverse('admin_login'), {
-            'admin_email': 'admin.session@advancebilling.com',
-            'admin_password': 'AdminSecurePass123!'
-        })
-        self.assertTrue(self.client.session.get('user_id'))
-
-        logout_resp = self.client.get(reverse('logout'))
-        self.assertEqual(logout_resp.status_code, 302)
-        # Session must be destroyed
-        self.assertFalse(self.client.session.get('user_id'))
-        self.assertFalse(self.client.session.get('_auth_user_id'))
-
-        # Subsequent protected access redirected
-        dash_resp = self.client.get(reverse('admin_dashboard'))
-        self.assertEqual(dash_resp.status_code, 302)
-        self.assertIn(reverse('admin_login'), dash_resp.url)
-
-    def test_expired_or_invalid_session_handled_properly(self):
-        """Invalid or tampered session keys are rejected cleanly."""
-        session = self.client.session
-        session['user_id'] = 999999  # Non-existent user id
-        session['_auth_user_id'] = '999999'
-        session['usertype'] = 'admin'
-        session.save()
-
-        resp = self.client.get(reverse('admin_dashboard'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn(reverse('admin_login'), resp.url)
-
-    def test_back_navigation_cache_control_headers_on_dashboards(self):
-        """Protected dashboards send never_cache headers preventing cached back navigation."""
-        self.client.post(reverse('admin_login'), {
-            'admin_email': 'admin.session@advancebilling.com',
-            'admin_password': 'AdminSecurePass123!'
-        })
-        resp = self.client.get(reverse('admin_dashboard'))
-        self.assertEqual(resp.status_code, 200)
-        cache_control = resp.headers.get('Cache-Control', '')
-        self.assertIn('no-cache', cache_control)
-        self.assertIn('no-store', cache_control)
-        self.assertIn('must-revalidate', cache_control)
-
-    def test_inactive_user_session_rejected(self):
-        """Deactivated user account has active session immediately invalidated."""
-        self.client.post(reverse('distributor_login'), {
-            'identity': 'dist.session@advancebilling.com',
-            'password': 'DistributorPass123!'
-        })
-        self.distributor_user.is_active = False
-        self.distributor_user.save()
-
-        resp = self.client.get(reverse('distributor_dashboard'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertIn(reverse('distributor_login'), resp.url)
 
 
 class QRCodeInvoiceParserAndRenderingTests(TestCase):
