@@ -7,17 +7,173 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Admin Login | Advance Billing System</title>
 
-    <!-- Unified Clean Stylesheet -->
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Unified Application Stylesheet -->
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+
+    <style>
+        /* Scoped Enhancements for Bootstrap 5 & Admin Login UI */
+        .auth-container-bs {
+            width: 100%;
+            max-width: 1060px;
+            margin: 0 auto;
+        }
+
+        .auth-card-admin {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+            transition: all 0.3s ease;
+        }
+
+        body.theme-light .auth-card-admin {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .form-section-admin {
+            padding: 2.75rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-heading {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 1.75rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+        }
+
+        .auth-subheading {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.28);
+            color: #34d399;
+            margin-bottom: 0.75rem;
+            width: fit-content;
+        }
+
+        .alert-custom-admin {
+            border-radius: var(--radius-md);
+            font-size: 0.84rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            margin-bottom: 1.25rem;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .alert-custom-admin.alert-error {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .alert-custom-admin.alert-success {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .alert-custom-admin.alert-info {
+            background: rgba(59, 130, 246, 0.12);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .mobile-brand-banner {
+            display: none;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mobile-brand-banner .brand-logo {
+            margin: 0 auto 0.75rem;
+        }
+
+        .btn-admin-submit {
+            width: 100%;
+            height: 46px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        .btn-admin-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+            color: #ffffff;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 991px) {
+            .form-section-admin {
+                padding: 2.25rem 2rem;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .mobile-brand-banner {
+                display: block;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .form-section-admin {
+                padding: 1.75rem 1.25rem;
+            }
+            .auth-heading {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="mode-admin">
 
     <!-- TOP BRAND HEADER -->
     <header class="top-header">
-        <div class="brand-title" onclick="window.location.href='{% url 'index' %}'">
+        <div class="brand-title" onclick="window.location.href='{% url 'index' %}'" role="button" tabindex="0">
             <div class="brand-logo"
-                style="background: linear-gradient(135deg, var(--admin-primary), var(--admin-hover)); shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+                style="background: linear-gradient(135deg, var(--admin-primary), var(--admin-hover)); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                         d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17"
@@ -51,179 +207,220 @@
     </header>
 
     <!-- MAIN ADMIN LOGIN PORTAL CARD -->
-    <main class="main-wrapper">
-        <div class="auth-card">
+    <main class="main-wrapper py-3 py-md-4">
+        <div class="auth-container-bs">
+            <div class="auth-card auth-card-admin">
 
-            <!-- LEFT HERO BRANDING SECTION -->
-            <section class="hero-section">
-                <div>
-                    <span class="hero-tag"
-                        style="background: rgba(16, 185, 129, 0.2); border-color: rgba(52, 211, 153, 0.3); color: #34d399;">MASTER
-                        CONTROL CENTER</span>
-                    <h2>Admin Security &<br>System Management.</h2>
-                    <p>Monitor real-time revenue analytics, distributor credit limits, system audit logs, and security
-                        keys.</p>
+                <!-- LEFT HERO BRANDING SECTION -->
+                <section class="hero-section">
+                    <div>
+                        <span class="hero-tag"
+                            style="background: rgba(16, 185, 129, 0.2); border-color: rgba(52, 211, 153, 0.3); color: #34d399;">
+                            MASTER CONTROL CENTER
+                        </span>
+                        <h2>Admin Security &<br>System Management.</h2>
+                        <p>Monitor real-time revenue analytics, distributor credit limits, system audit logs, and security keys.</p>
 
-                    <div class="hero-features">
-                        <div class="feature-box">
-                            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="20" x2="18" y2="10"></line>
-                                    <line x1="12" y1="20" x2="12" y2="4"></line>
-                                    <line x1="6" y1="20" x2="6" y2="14"></line>
-                                </svg>
+                        <div class="hero-features">
+                            <div class="feature-box">
+                                <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                                    </svg>
+                                </div>
+                                <div class="feature-text">
+                                    <h4>Revenue Monitor</h4>
+                                    <span>Real-time earnings</span>
+                                </div>
                             </div>
-                            <div class="feature-text">
-                                <h4>Revenue Monitor</h4>
-                                <span>Real-time earnings</span>
+
+                            <div class="feature-box">
+                                <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    </svg>
+                                </div>
+                                <div class="feature-text">
+                                    <h4>Distributor Control</h4>
+                                    <span>Limit & stock allocation</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="feature-box">
-                            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="9" cy="7" r="4"></circle>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                </svg>
+                            <div class="feature-box">
+                                <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                </div>
+                                <div class="feature-text">
+                                    <h4>Security Audit</h4>
+                                    <span>Encrypted signature keys</span>
+                                </div>
                             </div>
-                            <div class="feature-text">
-                                <h4>Distributor Control</h4>
-                                <span>Limit & stock allocation</span>
+
+                            <div class="feature-box">
+                                <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                                    </svg>
+                                </div>
+                                <div class="feature-text">
+                                    <h4>System Console</h4>
+                                    <span>Enterprise v4.2</span>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="feature-box">
-                            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                </svg>
-                            </div>
-                            <div class="feature-text">
-                                <h4>Security Audit</h4>
-                                <span>Encrypted signature keys</span>
-                            </div>
-                        </div>
-
-                        <div class="feature-box">
-                            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                                </svg>
-                            </div>
-                            <div class="feature-text">
-                                <h4>System Console</h4>
-                                <span>Enterprise v4.2</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="hero-footer">
-                    © 2026 Advance Billing System with QR
-                </div>
-            </section>
-
-
-            <!-- RIGHT FORM SECTION -->
-            <section class="form-section">
-                <div class="form-header">
-                    <h3>Admin Portal</h3>
-                    <p>Enter your master credentials to authenticate</p>
-                </div>
-
-                <!-- Django Feedback Messages -->
-                {% if messages %}
-                <div style="margin-bottom: 1rem;">
-                    {% for message in messages %}
-                    <div
-                        style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; {% if message.tags == 'error' %}background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);{% else %}background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);{% endif %}">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- ROLE SELECTION SWITCHER -->
-                <div class="role-switch">
-                    <a href="{% url 'distributor_login' %}" class="role-btn"
-                        style="text-decoration: none; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center;">
-                        Distributor Workspace
-                    </a>
-                    <button type="button" class="role-btn active"
-                        style="background: var(--admin-primary); color: #ffffff;">
-                        Admin Access
-                    </button>
-                </div>
-
-                <!-- Admin Login Form -->
-                <form action="{% url 'admin_login' %}" method="POST">
-                    {% csrf_token %}
-
-                    <div class="form-group">
-                        <div class="label-row"><label>Admin Email Address or Username</label></div>
-                        <div class="input-box">
-                            <span class="icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path
-                                        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
-                                    </path>
-                                    <polyline points="22,6 12,13 2,6"></polyline>
-                                </svg>
-                            </span>
-                            <input type="text" name="admin_email" class="input-field"
-                                placeholder="admin@advancebilling.com" required>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row">
-                            <label>Master Password</label>
-                            <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
+                    <div class="hero-footer">
+                        © 2026 Advance Billing System with QR
+                    </div>
+                </section>
+
+                <!-- RIGHT FORM SECTION -->
+                <section class="form-section form-section-admin">
+
+                    <!-- Mobile Brand Banner (visible on screens where hero collapses) -->
+                    <div class="mobile-brand-banner">
+                        <div class="brand-logo"
+                            style="background: linear-gradient(135deg, var(--admin-primary), var(--admin-hover)); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M3 7V5C3 3.89543 3.89543 3 5 3H7M17 3H19C20.1046 3 21 3.89543 21 5V7M21 17V19C21 20.1046 20.1046 21 19 21H17M7 21H5C3.89543 21 3 20.1046 3 19V17"
+                                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                                <rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" />
+                                <rect x="13" y="7" width="4" height="4" rx="1" fill="currentColor" />
+                                <rect x="7" y="13" width="4" height="4" rx="1" fill="currentColor" />
+                                <path d="M13 13H17V17H15V15H13V13Z" fill="currentColor" />
+                            </svg>
                         </div>
-                        <div class="input-box">
-                            <span class="icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                                </svg>
-                            </span>
-                            <input type="password" id="admin-pass" name="admin_password" class="input-field"
-                                placeholder="Enter master password" required>
-                            <button type="button" class="eye-btn" onclick="App.togglePassword('admin-pass', this)">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                            </button>
-                        </div>
+                        <h5 class="fw-bold mb-1" style="color: var(--text-primary); font-family: var(--font-head);">Advance Billing System</h5>
+                        <span class="small fw-semibold" style="color: #34d399; letter-spacing: 0.05em;">ADMIN CONTROL CENTER</span>
                     </div>
 
-                    <button type="submit" class="btn-primary"
-                        style="background: var(--admin-primary); margin-top: 0.5rem;">
-                        Authenticate Admin Portal
-                    </button>
-                </form>
+                    <!-- Form Header -->
+                    <div class="form-header">
+                        <div class="admin-badge-pill">
+                            <span class="dot" style="background: #34d399; width: 6px; height: 6px;"></span>
+                            MASTER AUTHENTICATION
+                        </div>
+                        <h2 class="auth-heading">Admin Login</h2>
+                        <p class="auth-subheading">Enter your master credentials to authenticate</p>
+                    </div>
 
-                <!-- Customer Registration Link -->
-                <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.88rem; color: var(--text-muted);">
-                    Looking for customer registration?
-                    <a href="{% url 'distributor_register' %}" style="color: var(--dist-primary); font-weight: 700; text-decoration: none; margin-left: 0.35rem;">
-                        Register as Customer &rarr;
-                    </a>
-                </div>
+                    <!-- Django Feedback Messages -->
+                    {% if messages %}
+                    <div class="messages-container mb-3">
+                        {% for message in messages %}
+                        <div class="alert alert-custom-admin {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} d-flex align-items-center p-3 mb-2" role="alert">
+                            <svg class="flex-shrink-0 me-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                {% if message.tags == 'error' %}
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                {% elif message.tags == 'success' %}
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                {% else %}
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                {% endif %}
+                            </svg>
+                            <span class="small fw-semibold">{{ message }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
-            </section>
+                    <!-- ROLE SELECTION SWITCHER -->
+                    <div class="role-switch">
+                        <a href="{% url 'distributor_login' %}" class="role-btn text-decoration-none"
+                            style="color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center;">
+                            Distributor Workspace
+                        </a>
+                        <button type="button" class="role-btn active"
+                            style="background: var(--admin-primary); color: #ffffff;">
+                            Admin Access
+                        </button>
+                    </div>
+
+                    <!-- Admin Login Form -->
+                    <form action="{% url 'admin_login' %}" method="POST" novalidate>
+                        {% csrf_token %}
+
+                        <div class="form-group mb-3">
+                            <div class="label-row"><label for="admin_email">Admin Email Address or Username</label></div>
+                            <div class="input-box">
+                                <span class="icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
+                                        </path>
+                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                </span>
+                                <input type="text" id="admin_email" name="admin_email" class="input-field"
+                                    placeholder="admin@advancebilling.com" autocomplete="username" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <div class="label-row">
+                                <label for="admin-pass">Master Password</label>
+                                <button type="button" class="link-btn" onclick="App.openModal()">Forgot password?</button>
+                            </div>
+                            <div class="input-box">
+                                <span class="icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                </span>
+                                <input type="password" id="admin-pass" name="admin_password" class="input-field"
+                                    placeholder="Enter master password" autocomplete="current-password" required>
+                                <button type="button" class="eye-btn" onclick="App.togglePassword('admin-pass', this)" title="Show/Hide Password" aria-label="Toggle password visibility">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-admin-submit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <span>Authenticate Admin Portal</span>
+                        </button>
+                    </form>
+
+                    <!-- Customer Registration Link -->
+                    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.88rem; color: var(--text-muted);">
+                        Looking for customer registration?
+                        <a href="{% url 'distributor_register' %}" style="color: var(--dist-primary); font-weight: 700; text-decoration: none; margin-left: 0.35rem;">
+                            Register as Customer &rarr;
+                        </a>
+                    </div>
+
+                </section>
+            </div>
         </div>
     </main>
 
@@ -234,14 +431,13 @@
 
             <!-- STEP 1: Enter Email/Phone -->
             <div id="step-1">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password
-                </h3>
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Reset Password</h3>
                 <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">Enter your registered
                     email or mobile to receive a 6-digit OTP.</p>
 
                 <form onsubmit="handleSendOTP(event)">
                     {% csrf_token %}
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -256,21 +452,18 @@
                                 placeholder="email or phone number" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">Send Security
-                        OTP</button>
+                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">Send Security OTP</button>
                 </form>
             </div>
 
             <!-- STEP 2: Verify OTP & Reset Password -->
             <div id="step-2" style="display: none;">
-                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify OTP & Set
-                    New Password</h3>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter the 6-digit OTP and
-                    your new password.</p>
+                <h3 style="font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 0.5rem;">Verify OTP & Set New Password</h3>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">Enter the 6-digit OTP and your new password.</p>
 
                 <form onsubmit="handleVerifyReset(event)">
                     {% csrf_token %}
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -285,7 +478,7 @@
                                 required>
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <div class="input-box">
                             <span class="icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -299,14 +492,15 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">Verify OTP &
-                        Reset Password</button>
+                    <button type="submit" class="btn-primary" style="background: var(--admin-primary);">Verify OTP & Reset Password</button>
                 </form>
             </div>
 
         </div>
     </div>
 
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Minimal JS App -->
     <script src="{% static 'assets/js/app.js' %}"></script>
     <script>
