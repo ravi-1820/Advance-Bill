@@ -20,6 +20,7 @@ from xhtml2pdf import pisa
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
 from billing.forms import InvoiceCreationForm
 from billing.qr_parser import parse_qr_invoice_data, validate_and_process_qr_input
+from billing.qr_generator import create_qr_png_bytes, generate_invoice_qr_code
 
 
 def index(request):
@@ -1614,19 +1615,8 @@ def generate_invoice_qr_base64(invoice):
     Avoids disk writes and duplicate permanent image accumulation.
     """
     qr_text = generate_invoice_qr_text(invoice)
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=6,
-        border=2,
-    )
-    qr.add_data(qr_text)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    b64_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    buffer.close()
+    png_bytes = create_qr_png_bytes(qr_text, box_size=6, border=2)
+    b64_str = base64.b64encode(png_bytes).decode('utf-8')
     return f"data:image/png;base64,{b64_str}"
 
 
@@ -1693,24 +1683,18 @@ def invoice_qr_code(request, id):
         return redirect('distributor_login')
 
     try:
-        invoice = Invoice.objects.select_related('customer').prefetch_related('items').get(id=id)
+        invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(id=id)
     except (Invoice.DoesNotExist, ValueError):
         raise Http404("Invoice not found.")
 
-    qr_text = generate_invoice_qr_text(invoice)
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=8,
-        border=3,
-    )
-    qr.add_data(qr_text)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    png_data = buffer.getvalue()
-    buffer.close()
+    if request.GET.get('format') == 'json':
+        qr_result = generate_invoice_qr_code(invoice, box_size=8, border=3)
+        if not qr_result['is_success']:
+            return HttpResponse(qr_result['error'] or "Error generating QR code.", status=500)
+        png_data = qr_result['qr_png_bytes']
+    else:
+        qr_text = generate_invoice_qr_text(invoice)
+        png_data = create_qr_png_bytes(qr_text, box_size=8, border=3)
 
     response = HttpResponse(png_data, content_type='image/png')
     clean_num = (invoice.invoice_number or str(invoice.id)).replace(' ', '_').replace('/', '_')
