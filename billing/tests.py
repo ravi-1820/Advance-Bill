@@ -5610,3 +5610,212 @@ class InvoicePreviewDynamicQRTests(TestCase):
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(response.content.startswith(b'%PDF-'))
         self.assertGreater(len(response.content), 2000)
+
+
+class AutomaticInvoiceQRGenerationTests(TestCase):
+    """
+    Task 3: Automatically Generate QR Code During Invoice Save.
+    Verifies end-to-end automatic QR generation & storage on invoice creation,
+    OpenCV scanning of stored PNG, duplicate prevention, error handling,
+    and preview reuse without regeneration.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.temp_media = tempfile.mkdtemp()
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="AutoQR Tester",
+            email="autoqr@example.com",
+            password="hashedpassword",
+            phone="9876543210",
+            company_name="AutoQR Corp",
+            usertype="distributor",
+            is_active=True,
+        )
+        self.customer = Customer.objects.create(
+            name="Vikram Joshi",
+            email="vikram@example.com",
+            phone="9812345678",
+        )
+        self.product = Product.objects.create(
+            name="Smart Thermal Printer",
+            category="Hardware",
+            price=Decimal("4000.00"),
+            stock=20,
+            gst_rate=Decimal("18.00"),
+        )
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.temp_media, ignore_errors=True)
+
+    def test_1_create_invoice_automatically_generates_and_stores_scannable_qr(self):
+        import io
+        import json
+        import numpy as np
+        from PIL import Image
+        from django.test import override_settings
+        from django.core.files.storage import default_storage
+        from billing.qr_generator import get_invoice_qr_storage_path
+        from billing.qr_parser import decode_qr_image_content
+
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            response = self.client.post(reverse('create_invoice'), {
+                'customer': str(self.customer.id),
+                'product': [str(self.product.id)],
+                'quantity': ['2'],
+                'gst': ['18'],
+                'discount': ['0'],
+            })
+            self.assertEqual(response.status_code, 302)
+
+            invoice = Invoice.objects.order_by('-id').first()
+            self.assertIsNotNone(invoice)
+            self.assertEqual(invoice.customer_id, self.customer.id)
+            self.assertEqual(invoice.total_amount, Decimal("9440.00"))
+
+            qr_path = get_invoice_qr_storage_path(invoice)
+            self.assertTrue(default_storage.exists(qr_path))
+
+            with default_storage.open(qr_path, 'rb') as f:
+                png_bytes = f.read()
+            cv_img = np.array(Image.open(io.BytesIO(png_bytes)).convert('RGB'))[:, :, ::-1]
+            status, decoded_texts, err = decode_qr_image_content(cv_img)
+            self.assertEqual(status, 'SUCCESS')
+            self.assertIsNone(err)
+
+            decoded_json = json.loads(decoded_texts[0])
+            self.assertEqual(decoded_json['invoice_id'], invoice.id)
+            self.assertEqual(decoded_json['invoice_number'], invoice.invoice_number)
+            self.assertEqual(decoded_json['customer']['name'], "Vikram Joshi")
+            self.assertEqual(decoded_json['total_amount'], 9440.00)
+            self.assertEqual(len(decoded_json['items']), 1)
+            self.assertEqual(decoded_json['items'][0]['quantity'], 2)
+
+    def test_2_multiple_invoices_create_separate_qr_files_without_overwrite(self):
+        from django.test import override_settings
+        from django.core.files.storage import default_storage
+        from billing.qr_generator import get_invoice_qr_storage_path
+
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            self.client.post(reverse('create_invoice'), {
+                'customer': str(self.customer.id),
+                'product': [str(self.product.id)],
+                'quantity': ['1'],
+                'gst': ['18'],
+                'discount': ['0'],
+            })
+            self.client.post(reverse('create_invoice'), {
+                'customer': str(self.customer.id),
+                'product': [str(self.product.id)],
+                'quantity': ['3'],
+                'gst': ['18'],
+                'discount': ['0'],
+            })
+
+            invoices = list(Invoice.objects.order_by('id'))
+            self.assertEqual(len(invoices), 2)
+            path_1 = get_invoice_qr_storage_path(invoices[0])
+            path_2 = get_invoice_qr_storage_path(invoices[1])
+            self.assertNotEqual(path_1, path_2)
+            self.assertTrue(default_storage.exists(path_1))
+            self.assertTrue(default_storage.exists(path_2))
+
+    def test_3_repeated_calls_prevent_duplicate_qr_generation(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        from billing.qr_generator import generate_and_store_invoice_qr
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-DUP-001",
+            total_amount=Decimal("4720.00"),
+            payment_status="paid",
+        )
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal("4000.00"),
+            total_price=Decimal("4720.00"),
+        )
+
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            first_res = generate_and_store_invoice_qr(invoice)
+            self.assertTrue(first_res['is_success'])
+            self.assertFalse(first_res['already_existed'])
+
+            with patch('billing.qr_generator.generate_invoice_qr_code') as mock_gen:
+                second_res = generate_and_store_invoice_qr(invoice)
+                self.assertTrue(second_res['is_success'])
+                self.assertTrue(second_res['already_existed'])
+                self.assertEqual(second_res['storage_path'], first_res['storage_path'])
+                mock_gen.assert_not_called()
+
+    def test_4_qr_generation_failure_is_reported_not_silently_ignored(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        from django.contrib.messages import get_messages
+
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            with patch('billing.views.generate_and_store_invoice_qr', return_value={
+                'is_success': False,
+                'error': 'Simulated QR encoder failure',
+            }):
+                response = self.client.post(reverse('create_invoice'), {
+                    'customer': str(self.customer.id),
+                    'product': [str(self.product.id)],
+                    'quantity': ['1'],
+                    'gst': ['18'],
+                    'discount': ['0'],
+                }, follow=True)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(Invoice.objects.count(), 1)
+                msgs = [str(m) for m in get_messages(response.wsgi_request)]
+                self.assertTrue(any("automatic QR generation failed" in m for m in msgs))
+
+    def test_5_file_storage_failure_handled_safely(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+        from billing.qr_generator import generate_and_store_invoice_qr
+
+        invoice = Invoice.objects.create(
+            customer=self.customer,
+            invoice_number="INV-STOR-ERR",
+            total_amount=Decimal("4000.00"),
+            payment_status="paid",
+        )
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            with patch('billing.qr_generator.default_storage.save', side_effect=OSError("Disk full")):
+                res = generate_and_store_invoice_qr(invoice)
+                self.assertFalse(res['is_success'])
+                self.assertIn("File storage failed", res['error'])
+
+    def test_6_preview_reuses_stored_qr_without_regenerating(self):
+        from unittest.mock import patch
+        from django.test import override_settings
+
+        with override_settings(MEDIA_ROOT=self.temp_media):
+            self.client.post(reverse('create_invoice'), {
+                'customer': str(self.customer.id),
+                'product': [str(self.product.id)],
+                'quantity': ['1'],
+                'gst': ['18'],
+                'discount': ['0'],
+            })
+            invoice = Invoice.objects.order_by('-id').first()
+
+            with patch('billing.views.generate_invoice_qr_code') as mock_gen:
+                preview_resp = self.client.get(reverse('invoice_detail', args=[invoice.id]))
+                self.assertEqual(preview_resp.status_code, 200)
+                self.assertIn("data:image/png;base64,", preview_resp.content.decode('utf-8'))
+                mock_gen.assert_not_called()
+
+            pdf_resp = self.client.get(reverse('invoice_pdf', args=[invoice.id]))
+            self.assertEqual(pdf_resp.status_code, 200)
+            self.assertTrue(pdf_resp.content.startswith(b'%PDF-'))

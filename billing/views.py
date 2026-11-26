@@ -20,7 +20,12 @@ from xhtml2pdf import pisa
 from billing.models import User, OTP, Customer, Product, Invoice, InvoiceItem
 from billing.forms import InvoiceCreationForm
 from billing.qr_parser import parse_qr_invoice_data, validate_and_process_qr_input
-from billing.qr_generator import create_qr_png_bytes, generate_invoice_qr_code
+from billing.qr_generator import (
+    create_qr_png_bytes,
+    generate_invoice_qr_code,
+    generate_and_store_invoice_qr,
+    get_stored_invoice_qr,
+)
 
 
 def index(request):
@@ -1493,12 +1498,22 @@ def create_invoice(request):
             except Exception:
                 return render_form_with_error("An error occurred while saving the invoice. Please try again.")
 
+            # Automatically generate and store QR code for the newly saved invoice
+            qr_store_result = generate_and_store_invoice_qr(invoice)
             request.session['latest_invoice_id'] = invoice.id
-            messages.success(
-                request,
-                f"Invoice created successfully! (#{invoice.invoice_number}) "
-                f"<a href=\"/invoice/{invoice.id}/pdf/\" target=\"_blank\" style=\"color:#3b82f6; text-decoration:underline; font-weight:600; margin-left:8px;\">Download PDF</a>"
-            )
+            if qr_store_result.get('is_success'):
+                messages.success(
+                    request,
+                    f"Invoice created successfully! (#{invoice.invoice_number}) "
+                    f"<a href=\"/invoice/{invoice.id}/pdf/\" target=\"_blank\" style=\"color:#3b82f6; text-decoration:underline; font-weight:600; margin-left:8px;\">Download PDF</a>"
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"Invoice #{invoice.invoice_number} saved, but automatic QR generation failed: "
+                    f"{qr_store_result.get('error', 'Unknown error')} "
+                    f"<a href=\"/invoice/{invoice.id}/pdf/\" target=\"_blank\" style=\"color:#3b82f6; text-decoration:underline; font-weight:600; margin-left:8px;\">Download PDF</a>"
+                )
             return redirect('create_invoice')
         else:
             form = InvoiceCreationForm()
@@ -1540,13 +1555,16 @@ def invoice_pdf(request, id):
     except (Invoice.DoesNotExist, ValueError):
         raise Http404("Invoice not found.")
 
+    stored_qr = get_stored_invoice_qr(invoice)
+    qr_code_uri = stored_qr['qr_base64'] if stored_qr.get('exists') else generate_invoice_qr_base64(invoice)
+
     context = {
         'invoice': invoice,
         'customer': invoice.customer,
         'items': invoice.items.all(),
         'distributor': user,
         'company_name': user.company_name or 'Advance Billing System',
-        'qr_code_uri': generate_invoice_qr_base64(invoice),
+        'qr_code_uri': qr_code_uri,
         'qr_text': generate_invoice_qr_text(invoice),
     }
 
@@ -1688,10 +1706,14 @@ def invoice_qr_code(request, id):
         raise Http404("Invoice not found.")
 
     if request.GET.get('format') == 'json':
-        qr_result = generate_invoice_qr_code(invoice, box_size=8, border=3)
-        if not qr_result['is_success']:
-            return HttpResponse(qr_result['error'] or "Error generating QR code.", status=500)
-        png_data = qr_result['qr_png_bytes']
+        stored_qr = get_stored_invoice_qr(invoice)
+        if stored_qr.get('exists'):
+            png_data = stored_qr['qr_png_bytes']
+        else:
+            qr_result = generate_invoice_qr_code(invoice, box_size=8, border=3)
+            if not qr_result['is_success']:
+                return HttpResponse(qr_result['error'] or "Error generating QR code.", status=500)
+            png_data = qr_result['qr_png_bytes']
     else:
         qr_text = generate_invoice_qr_text(invoice)
         png_data = create_qr_png_bytes(qr_text, box_size=8, border=3)
@@ -1772,11 +1794,15 @@ def scan_qr_invoice_view(request):
     qr_data_uri = None
     qr_error = None
     if valid_invoice_data and valid_invoice_data.get('invoice_id'):
-        qr_result = generate_invoice_qr_code(valid_invoice_data['invoice_id'])
-        if qr_result.get('is_success'):
-            qr_data_uri = qr_result.get('qr_base64')
+        stored_qr = get_stored_invoice_qr(valid_invoice_data['invoice_id'])
+        if stored_qr.get('exists'):
+            qr_data_uri = stored_qr.get('qr_base64')
         else:
-            qr_error = qr_result.get('error')
+            qr_result = generate_invoice_qr_code(valid_invoice_data['invoice_id'])
+            if qr_result.get('is_success'):
+                qr_data_uri = qr_result.get('qr_base64')
+            else:
+                qr_error = qr_result.get('error')
 
     context = {
         'user': user,
@@ -1812,10 +1838,17 @@ def invoice_detail_view(request, id):
     elif getattr(request, 'user', None) and request.user.is_authenticated:
         user = request.user
 
-    qr_result = generate_invoice_qr_code(invoice)
-    qr_data_uri = qr_result.get('qr_base64') if qr_result.get('is_success') else None
-    qr_error = qr_result.get('error') if not qr_result.get('is_success') else None
-    qr_text = qr_result.get('payload_json') or generate_invoice_qr_text(invoice)
+    stored_qr = get_stored_invoice_qr(invoice)
+    if stored_qr.get('exists'):
+        qr_data_uri = stored_qr.get('qr_base64')
+        qr_error = None
+        qr_text = generate_invoice_qr_text(invoice)
+    else:
+        qr_result = generate_invoice_qr_code(invoice)
+        qr_data_uri = qr_result.get('qr_base64') if qr_result.get('is_success') else None
+        qr_error = qr_result.get('error') if not qr_result.get('is_success') else None
+        qr_text = qr_result.get('payload_json') or generate_invoice_qr_text(invoice)
+
     parsed_invoice = parse_qr_invoice_data(qr_text)
 
     context = {

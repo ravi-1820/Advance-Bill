@@ -1,8 +1,11 @@
 import io
+import re
 import json
 import base64
 from decimal import Decimal
 import qrcode
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from billing.models import Invoice
 
 
@@ -266,5 +269,151 @@ def generate_invoice_qr_code(invoice_identifier, box_size=8, border=3):
         result['error'] = str(exc)
     except Exception as exc:
         result['error'] = f"Failed to generate invoice QR code: {exc}"
+
+    return result
+
+
+def get_invoice_qr_storage_path(invoice):
+    """
+    Build a deterministic, collision-free media storage path for an invoice's QR PNG.
+    """
+    if not isinstance(invoice, Invoice) or not invoice.pk:
+        raise ValueError("A saved Invoice instance with a primary key is required.")
+
+    raw_num = str(invoice.invoice_number or invoice.id)
+    clean_num = re.sub(r'[^A-Za-z0-9_-]+', '_', raw_num).strip('_') or str(invoice.id)
+    return f"qr_codes/invoice_{invoice.id}_{clean_num}.png"
+
+
+def get_stored_invoice_qr(invoice_identifier):
+    """
+    Retrieve an already-stored QR code image for the given invoice without regenerating it.
+    Returns a dict with 'exists', 'storage_path', 'storage_url', 'qr_png_bytes', 'qr_base64', and 'error'.
+    """
+    result = {
+        'exists': False,
+        'storage_path': None,
+        'storage_url': None,
+        'qr_png_bytes': None,
+        'qr_base64': None,
+        'error': None,
+    }
+    try:
+        invoice = (
+            invoice_identifier
+            if isinstance(invoice_identifier, Invoice) and invoice_identifier.pk
+            else fetch_saved_invoice(invoice_identifier)
+        )
+        qr_path = get_invoice_qr_storage_path(invoice)
+        if not default_storage.exists(qr_path):
+            return result
+
+        with default_storage.open(qr_path, 'rb') as f:
+            png_bytes = f.read()
+
+        if not png_bytes:
+            result['error'] = "Stored QR image file is empty."
+            return result
+
+        b64_str = base64.b64encode(png_bytes).decode('utf-8')
+        try:
+            storage_url = default_storage.url(qr_path)
+        except Exception:
+            storage_url = None
+
+        result.update({
+            'exists': True,
+            'storage_path': qr_path,
+            'storage_url': storage_url,
+            'qr_png_bytes': png_bytes,
+            'qr_base64': f"data:image/png;base64,{b64_str}",
+            'error': None,
+        })
+    except Exception as exc:
+        result['error'] = f"Failed to retrieve stored QR code: {exc}"
+    return result
+
+
+def generate_and_store_invoice_qr(invoice_identifier, box_size=8, border=3, force=False):
+    """
+    Task 3: Automatically generate and store a QR code for a saved invoice.
+    - Prevents duplicate file creation when a QR image already exists for the invoice.
+    - Reuses Task 1's fetch_saved_invoice, prepare_invoice_qr_payload, and generate_invoice_qr_code.
+    - Handles QR generation failures and file storage failures safely.
+    """
+    result = {
+        'is_success': False,
+        'already_existed': False,
+        'invoice_id': None,
+        'invoice_number': None,
+        'storage_path': None,
+        'storage_url': None,
+        'payload': None,
+        'payload_json': None,
+        'qr_png_bytes': None,
+        'qr_base64': None,
+        'error': None,
+    }
+
+    try:
+        invoice = fetch_saved_invoice(invoice_identifier)
+        qr_path = get_invoice_qr_storage_path(invoice)
+        result['invoice_id'] = invoice.id
+        result['invoice_number'] = invoice.invoice_number or str(invoice.id)
+
+        # Duplicate prevention: reuse existing stored QR image if present
+        if not force and default_storage.exists(qr_path):
+            stored = get_stored_invoice_qr(invoice)
+            if stored.get('exists'):
+                payload_dict, payload_json = prepare_invoice_qr_payload(invoice)
+                result.update({
+                    'is_success': True,
+                    'already_existed': True,
+                    'storage_path': stored['storage_path'],
+                    'storage_url': stored['storage_url'],
+                    'payload': payload_dict,
+                    'payload_json': payload_json,
+                    'qr_png_bytes': stored['qr_png_bytes'],
+                    'qr_base64': stored['qr_base64'],
+                    'error': None,
+                })
+                return result
+
+        # Generate QR using Task 1 pipeline
+        gen_result = generate_invoice_qr_code(invoice, box_size=box_size, border=border)
+        if not gen_result.get('is_success') or not gen_result.get('qr_png_bytes'):
+            result['error'] = gen_result.get('error') or "QR code generation failed."
+            return result
+
+        # Store PNG using Django's configured storage without creating duplicate files
+        try:
+            if force and default_storage.exists(qr_path):
+                default_storage.delete(qr_path)
+            saved_path = default_storage.save(qr_path, ContentFile(gen_result['qr_png_bytes']))
+            try:
+                storage_url = default_storage.url(saved_path)
+            except Exception:
+                storage_url = None
+        except Exception as storage_exc:
+            result['error'] = f"File storage failed while saving QR code: {storage_exc}"
+            return result
+
+        result.update({
+            'is_success': True,
+            'already_existed': False,
+            'storage_path': saved_path,
+            'storage_url': storage_url,
+            'payload': gen_result['payload'],
+            'payload_json': gen_result['payload_json'],
+            'qr_png_bytes': gen_result['qr_png_bytes'],
+            'qr_base64': gen_result['qr_base64'],
+            'error': None,
+        })
+    except Invoice.DoesNotExist:
+        result['error'] = "Invoice not found in the database."
+    except ValueError as exc:
+        result['error'] = str(exc)
+    except Exception as exc:
+        result['error'] = f"Unexpected error during automatic QR generation: {exc}"
 
     return result
