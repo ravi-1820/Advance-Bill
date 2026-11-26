@@ -287,17 +287,78 @@
             font-size: 1.35rem;
         }
 
+        .qr-preview-card {
+            background: var(--card-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem 1.5rem;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .qr-image-frame {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .invoice-qr-img {
+            width: 140px;
+            height: 140px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .qr-fallback-box {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            background: rgba(245, 158, 11, 0.08);
+            color: var(--text-muted);
+            width: 100%;
+        }
+
         @media print {
             .top-navbar, .upload-card-wrapper, .no-print {
                 display: none !important;
             }
             body {
                 background: #ffffff !important;
-                color: #000000 !important;
+                color: #0f172a !important;
             }
-            .invoice-card {
-                border: none !important;
+            .invoice-card, .meta-subcard, .summary-box, .qr-preview-card {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                border-color: #cbd5e1 !important;
                 box-shadow: none !important;
+            }
+            .text-white {
+                color: #0f172a !important;
+            }
+            .text-muted, .text-secondary {
+                color: #475569 !important;
+            }
+            .invoice-table th {
+                background: #f1f5f9 !important;
+                color: #334155 !important;
+                border-color: #cbd5e1 !important;
+            }
+            .invoice-table td {
+                color: #0f172a !important;
+                border-color: #e2e8f0 !important;
+            }
+            .qr-image-frame {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
             }
         }
     </style>
@@ -518,10 +579,48 @@
                     </table>
                 </div>
 
-                <!-- SUMMARY TOTALS GRID -->
-                <div class="row justify-content-end mt-3">
+                <!-- QR CODE & SUMMARY TOTALS GRID -->
+                <div class="row g-4 mt-3 align-items-stretch">
+                    <div class="col-md-6 col-lg-7">
+                        <div class="qr-preview-card" id="invoice-qr-section">
+                            {% if qr_data_uri %}
+                            <div class="qr-image-frame">
+                                <img src="{{ qr_data_uri }}"
+                                     alt="QR Code for Invoice #{{ invoice_data.invoice_number }}"
+                                     class="invoice-qr-img"
+                                     onerror="this.closest('.qr-image-frame').classList.add('d-none'); document.getElementById('qr-fallback-msg').classList.remove('d-none');">
+                            </div>
+                            <div class="flex-grow-1" style="min-width: 180px;">
+                                <div class="meta-subcard-title mb-2">Scan QR Code</div>
+                                <p class="small text-muted mb-2" style="line-height: 1.5;">
+                                    Scan this QR code with any standard QR reader to verify <strong class="text-white">Invoice #{{ invoice_data.invoice_number }}</strong>, customer details, items, and total amount.
+                                </p>
+                                <div class="small mb-2" style="color: #34d399; font-weight: 600;">
+                                    &bull; Dynamic Verified QR Payload
+                                </div>
+                                {% if invoice_data.invoice_id %}
+                                <a href="{% url 'invoice_qr_code' invoice_data.invoice_id %}?format=json&amp;download=1"
+                                   class="btn btn-sm btn-outline-primary no-print d-inline-flex align-items-center gap-1">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <span>Download QR</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                            <div id="qr-fallback-msg" class="qr-fallback-box d-none">
+                                <strong class="d-block mb-1" style="color: #fbbf24;">QR Code Unavailable</strong>
+                                <span class="small">Unable to load the QR code image for this invoice.</span>
+                            </div>
+                            {% else %}
+                            <div id="qr-fallback-msg" class="qr-fallback-box">
+                                <strong class="d-block mb-1" style="color: #fbbf24;">QR Code Unavailable</strong>
+                                <span class="small">{{ qr_error|default:"QR code has not been generated for this invoice yet." }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
                     <div class="col-md-6 col-lg-5">
-                        <div class="summary-box">
+                        <div class="summary-box h-100 d-flex flex-column justify-content-center">
                             <div class="summary-row">
                                 <span>Subtotal</span>
                                 <strong>₹ {{ invoice_data.subtotal|floatformat:2 }}</strong>

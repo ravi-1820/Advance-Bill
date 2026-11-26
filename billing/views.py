@@ -1769,12 +1769,23 @@ def scan_qr_invoice_view(request):
     # Strictly enforce Data Safety: only valid invoices are marked as invoice_data
     valid_invoice_data = parsed_invoice if (parsed_invoice and parsed_invoice.get('is_valid')) else None
 
+    qr_data_uri = None
+    qr_error = None
+    if valid_invoice_data and valid_invoice_data.get('invoice_id'):
+        qr_result = generate_invoice_qr_code(valid_invoice_data['invoice_id'])
+        if qr_result.get('is_success'):
+            qr_data_uri = qr_result.get('qr_base64')
+        else:
+            qr_error = qr_result.get('error')
+
     context = {
         'user': user,
         'profile': user,
         'invoice_data': valid_invoice_data,
         'parsed_invoice': parsed_invoice,
         'decoded_text': decoded_text,
+        'qr_data_uri': qr_data_uri,
+        'qr_error': qr_error,
         'error_msg': error_message,
         'error_message': error_message,
     }
@@ -1783,7 +1794,8 @@ def scan_qr_invoice_view(request):
 
 def invoice_detail_view(request, id):
     """
-    Renders full structured invoice information alongside its live QR code.
+    Renders full structured invoice information alongside its live QR code
+    generated from the saved invoice record (Task 1 & Task 2).
     """
     try:
         invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(id=id)
@@ -1800,8 +1812,10 @@ def invoice_detail_view(request, id):
     elif getattr(request, 'user', None) and request.user.is_authenticated:
         user = request.user
 
-    qr_text = generate_invoice_qr_text(invoice)
-    qr_data_uri = generate_invoice_qr_base64(invoice)
+    qr_result = generate_invoice_qr_code(invoice)
+    qr_data_uri = qr_result.get('qr_base64') if qr_result.get('is_success') else None
+    qr_error = qr_result.get('error') if not qr_result.get('is_success') else None
+    qr_text = qr_result.get('payload_json') or generate_invoice_qr_text(invoice)
     parsed_invoice = parse_qr_invoice_data(qr_text)
 
     context = {
@@ -1812,6 +1826,8 @@ def invoice_detail_view(request, id):
         'parsed_invoice': parsed_invoice,
         'decoded_text': qr_text,
         'qr_data_uri': qr_data_uri,
+        'qr_error': qr_error,
+        'is_preview_mode': True,
     }
     return render(request, 'billing/scan-qr-invoice.html', context)
 

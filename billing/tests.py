@@ -5458,3 +5458,155 @@ class SavedInvoiceQRGenerationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'image/png')
         self.assertGreater(len(response.content), 100)
+
+
+class InvoicePreviewDynamicQRTests(TestCase):
+    """
+    Task 2: Display QR Code Dynamically in Invoice Preview Template.
+    Verifies dynamic QR rendering per invoice, OpenCV scanning of rendered HTML QR,
+    isolation between invoices, missing-QR fallback handling, print styles, and PDF export.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.distributor = User.objects.create(
+            name="Preview Tester",
+            email="preview@example.com",
+            password="hashedpassword",
+            phone="9876543210",
+            company_name="Preview Corp",
+            usertype="distributor",
+            is_active=True,
+        )
+        self.customer_a = Customer.objects.create(name="Aarav Mehta", phone="9111111111")
+        self.customer_b = Customer.objects.create(name="Priya Sharma", phone="9222222222")
+        self.product = Product.objects.create(
+            name="POS Terminal",
+            category="Electronics",
+            price=Decimal("2500.00"),
+            stock=10,
+            gst_rate=Decimal("18.00"),
+        )
+        self.invoice_a = Invoice.objects.create(
+            customer=self.customer_a,
+            invoice_number="INV-PREV-101",
+            total_amount=Decimal("2950.00"),
+            payment_status="paid",
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice_a,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal("2500.00"),
+            total_price=Decimal("2950.00"),
+        )
+        self.invoice_b = Invoice.objects.create(
+            customer=self.customer_b,
+            invoice_number="INV-PREV-202",
+            total_amount=Decimal("5900.00"),
+            payment_status="pending",
+        )
+        InvoiceItem.objects.create(
+            invoice=self.invoice_b,
+            product=self.product,
+            quantity=2,
+            unit_price=Decimal("2500.00"),
+            total_price=Decimal("5900.00"),
+        )
+
+    def _login_distributor(self):
+        session = self.client.session
+        session['user_id'] = self.distributor.id
+        session['usertype'] = 'distributor'
+        session.save()
+
+    def _extract_qr_base64_from_html(self, html):
+        import re
+        match = re.search(r'src="(data:image/png;base64,([^"]+))"', html)
+        self.assertIsNotNone(match, "Expected dynamic base64 QR image in invoice preview HTML.")
+        return match.group(1), match.group(2)
+
+    def test_1_preview_displays_dynamic_qr_and_scans_to_selected_invoice(self):
+        import io
+        import json
+        import base64
+        import numpy as np
+        from PIL import Image
+        from billing.qr_parser import decode_qr_image_content
+
+        self._login_distributor()
+        response = self.client.get(reverse('invoice_detail', args=[self.invoice_a.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
+
+        self.assertIn("Scan QR Code", html)
+        self.assertIn("INV-PREV-101", html)
+        self.assertIn("@media print", html)
+
+        _, b64_payload = self._extract_qr_base64_from_html(html)
+        png_bytes = base64.b64decode(b64_payload)
+        pil_img = Image.open(io.BytesIO(png_bytes)).convert('RGB')
+        cv_img = np.array(pil_img)[:, :, ::-1]
+
+        status, decoded_texts, err = decode_qr_image_content(cv_img)
+        self.assertEqual(status, 'SUCCESS')
+        self.assertIsNone(err)
+        decoded_json = json.loads(decoded_texts[0])
+        self.assertEqual(decoded_json['invoice_id'], self.invoice_a.id)
+        self.assertEqual(decoded_json['invoice_number'], "INV-PREV-101")
+        self.assertEqual(decoded_json['customer']['name'], "Aarav Mehta")
+        self.assertEqual(decoded_json['total_amount'], 2950.00)
+
+    def test_2_different_invoices_display_distinct_qr_codes(self):
+        import io
+        import json
+        import base64
+        import numpy as np
+        from PIL import Image
+        from billing.qr_parser import decode_qr_image_content
+
+        self._login_distributor()
+        res_a = self.client.get(reverse('invoice_detail', args=[self.invoice_a.id]))
+        res_b = self.client.get(reverse('invoice_detail', args=[self.invoice_b.id]))
+
+        uri_a, _ = self._extract_qr_base64_from_html(res_a.content.decode('utf-8'))
+        uri_b, b64_b = self._extract_qr_base64_from_html(res_b.content.decode('utf-8'))
+        self.assertNotEqual(uri_a, uri_b)
+
+        png_b = base64.b64decode(b64_b)
+        cv_b = np.array(Image.open(io.BytesIO(png_b)).convert('RGB'))[:, :, ::-1]
+        status, decoded_texts, _ = decode_qr_image_content(cv_b)
+        self.assertEqual(status, 'SUCCESS')
+        decoded_b = json.loads(decoded_texts[0])
+        self.assertEqual(decoded_b['invoice_id'], self.invoice_b.id)
+        self.assertEqual(decoded_b['invoice_number'], "INV-PREV-202")
+        self.assertEqual(decoded_b['customer']['name'], "Priya Sharma")
+
+    def test_3_missing_or_failed_qr_displays_safe_fallback_without_crashing(self):
+        from unittest.mock import patch
+
+        self._login_distributor()
+        with patch('billing.views.generate_invoice_qr_code', return_value={
+            'is_success': False,
+            'qr_base64': None,
+            'payload_json': None,
+            'error': 'QR code has not been generated for this invoice yet.',
+        }):
+            response = self.client.get(reverse('invoice_detail', args=[self.invoice_a.id]))
+            self.assertEqual(response.status_code, 200)
+            html = response.content.decode('utf-8')
+            self.assertIn("QR Code Unavailable", html)
+            self.assertIn("QR code has not been generated for this invoice yet.", html)
+
+    def test_4_nonexistent_invoice_returns_404(self):
+        self._login_distributor()
+        response = self.client.get(reverse('invoice_detail', args=[999999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_5_pdf_download_still_works_with_embedded_qr(self):
+        self._login_distributor()
+        response = self.client.get(reverse('invoice_pdf', args=[self.invoice_a.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+        self.assertGreater(len(response.content), 2000)
