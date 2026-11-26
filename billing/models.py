@@ -58,6 +58,20 @@ class User(models.Model):
     def username(self):
         return self.email
 
+    @property
+    def is_staff(self):
+        return self.usertype == 'admin'
+
+    @property
+    def is_superuser(self):
+        return self.usertype == 'admin'
+
+    def has_perm(self, perm, obj=None):
+        return bool(self.is_active and self.usertype == 'admin')
+
+    def has_module_perms(self, app_label):
+        return bool(self.is_active and self.usertype == 'admin')
+
     def get_session_auth_hash(self):
         import hashlib
         key_salt = "billing.models.User.get_session_auth_hash"
